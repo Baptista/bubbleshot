@@ -256,11 +256,54 @@ public class GameEngine
         int col = (int)Math.Round((position.X - startX - offsetX) / bubbleDiameter);
         col = Math.Max(0, Math.Min(col, MaxCols - 1));
 
-        // Check if position is occupied
-        while (_bubbles.Any(b => b.Row == row && b.Col == col && !b.IsPopping))
+        // Check if position is occupied - find nearest empty spot
+        if (_bubbles.Any(b => b.Row == row && b.Col == col && !b.IsPopping))
         {
-            row--;
-            if (row < 0) row = 0;
+            // Try to find empty adjacent positions
+            var candidates = new List<(int row, int col, float distance)>();
+
+            // Check all nearby positions in a 3x3 grid
+            for (int r = Math.Max(0, row - 1); r <= Math.Min(MaxRows - 1, row + 1); r++)
+            {
+                bool isOddRow = r % 2 == 1;
+                int colStart = isOddRow ? Math.Max(0, col - 1) : col - 1;
+                int colEnd = isOddRow ? col + 1 : Math.Min(MaxCols - 1, col + 1);
+
+                for (int c = Math.Max(0, colStart); c <= Math.Min(MaxCols - 1, colEnd); c++)
+                {
+                    // Skip if occupied
+                    if (_bubbles.Any(b => b.Row == r && b.Col == c && !b.IsPopping))
+                        continue;
+
+                    // Calculate distance from original position
+                    float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
+                    float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
+                    float candidateY = startY + r * bubbleDiameter * 0.866f;
+                    float dist = (position.X - candidateX) * (position.X - candidateX) +
+                                 (position.Y - candidateY) * (position.Y - candidateY);
+
+                    candidates.Add((r, c, dist));
+                }
+            }
+
+            // Use the closest empty position
+            if (candidates.Count > 0)
+            {
+                var closest = candidates.OrderBy(c => c.distance).First();
+                row = closest.row;
+                col = closest.col;
+            }
+            else
+            {
+                // Fallback: move up until we find empty spot
+                while (_bubbles.Any(b => b.Row == row && b.Col == col && !b.IsPopping) && row > 0)
+                {
+                    row--;
+                    offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
+                    col = (int)Math.Round((position.X - startX - offsetX) / bubbleDiameter);
+                    col = Math.Max(0, Math.Min(col, MaxCols - 1));
+                }
+            }
         }
 
         return (row, col);
@@ -275,8 +318,12 @@ public class GameEngine
         toCheck.Enqueue(startBubble);
         checked_.Add(startBubble);
 
-        while (toCheck.Count > 0)
+        int safetyCounter = 0;
+        int maxIterations = 1000; // Safety limit to prevent infinite loops
+
+        while (toCheck.Count > 0 && safetyCounter < maxIterations)
         {
+            safetyCounter++;
             var current = toCheck.Dequeue();
             matching.Add(current);
 
@@ -345,9 +392,13 @@ public class GameEngine
             connected.Add(bubble);
         }
 
+        int safetyCounter = 0;
+        int maxIterations = 1000; // Safety limit to prevent infinite loops
+
         // Find all connected bubbles
-        while (toCheck.Count > 0)
+        while (toCheck.Count > 0 && safetyCounter < maxIterations)
         {
+            safetyCounter++;
             var current = toCheck.Dequeue();
             var neighbors = GetNeighbors(current);
 
