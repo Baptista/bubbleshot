@@ -18,7 +18,7 @@ public class GameCanvasView : SKCanvasView
         set
         {
             _gameEngine = value;
-            _isInitialized = false;  // Reset initialization flag when engine changes
+            // Don't reset initialization flag - canvas size stays the same
             InvalidateSurface();
         }
     }

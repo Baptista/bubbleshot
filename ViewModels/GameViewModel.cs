@@ -9,6 +9,8 @@ public class GameViewModel : BaseViewModel
     private readonly DatabaseService _databaseService;
     private GameEngine _gameEngine;
     private int _currentLevel;
+    private float _canvasWidth;
+    private float _canvasHeight;
 
     public GameEngine GameEngine => _gameEngine;
 
@@ -41,6 +43,8 @@ public class GameViewModel : BaseViewModel
     public void InitializeGame(float width, float height, int level = 1)
     {
         _currentLevel = level;
+        _canvasWidth = width;
+        _canvasHeight = height;
         _gameEngine.InitializeGame(width, height, level);
         UpdateStatus();
     }
@@ -63,18 +67,14 @@ public class GameViewModel : BaseViewModel
 
     private void Restart()
     {
-        _gameEngine.InitializeGame(_gameEngine.ShooterPosition.X * 2,
-                                   _gameEngine.ShooterPosition.Y + 100,
-                                   _currentLevel);
+        _gameEngine.InitializeGame(_canvasWidth, _canvasHeight, _currentLevel);
         UpdateStatus();
     }
 
     private void NextLevel()
     {
         _currentLevel++;
-        _gameEngine.InitializeGame(_gameEngine.ShooterPosition.X * 2,
-                                   _gameEngine.ShooterPosition.Y + 100,
-                                   _currentLevel);
+        _gameEngine.InitializeGame(_canvasWidth, _canvasHeight, _currentLevel);
         UpdateStatus();
         ((Command)NextLevelCommand).ChangeCanExecute();
     }
