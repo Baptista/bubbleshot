@@ -17,19 +17,9 @@ public partial class GamePage : ContentPage
     {
         base.OnAppearing();
 
-        // Initialize game when canvas is ready
-        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
-        {
-            var width = (float)GameCanvas.Width;
-            var height = (float)GameCanvas.Height;
-
-            if (width > 0 && height > 0)
-            {
-                _viewModel.InitializeGame(width, height);
-                GameCanvas.GameEngine = _viewModel.GameEngine;
-                GameCanvas.StartGameLoop();
-            }
-        });
+        // Set the game engine - it will initialize on first paint with actual canvas size
+        GameCanvas.GameEngine = _viewModel.GameEngine;
+        GameCanvas.StartGameLoop();
 
         // Monitor game state
         Dispatcher.StartTimer(TimeSpan.FromMilliseconds(100), () =>

@@ -10,6 +10,7 @@ public class GameCanvasView : SKCanvasView
     private GameEngine? _gameEngine;
     private DateTime _lastUpdate;
     private bool _isRunning;
+    private bool _isInitialized;
 
     public GameEngine? GameEngine
     {
@@ -17,6 +18,7 @@ public class GameCanvasView : SKCanvasView
         set
         {
             _gameEngine = value;
+            _isInitialized = false;  // Reset initialization flag when engine changes
             InvalidateSurface();
         }
     }
@@ -39,6 +41,13 @@ public class GameCanvasView : SKCanvasView
 
         if (_gameEngine == null)
             return;
+
+        // Initialize game with actual canvas size on first paint
+        if (!_isInitialized && info.Width > 0 && info.Height > 0)
+        {
+            _gameEngine.InitializeGame(info.Width, info.Height, _gameEngine.GameState.CurrentLevel);
+            _isInitialized = true;
+        }
 
         // Draw background gradient
         DrawBackground(canvas, info);

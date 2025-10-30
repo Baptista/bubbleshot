@@ -43,9 +43,9 @@ public class GameEngine
         _canvasWidth = canvasWidth;
         _canvasHeight = canvasHeight;
 
-        // Calculate bubble radius for much larger bubbles - use more screen space
-        float maxBubbleWidth = (_canvasWidth - 20) / MaxCols; // Reduced margin for bigger bubbles
-        _bubbleRadius = maxBubbleWidth / 2.05f; // Much larger bubbles, no artificial cap
+        // Calculate bubble radius - use MUCH more screen space!
+        float maxBubbleWidth = (_canvasWidth - 10) / MaxCols; // Minimal margin
+        _bubbleRadius = (maxBubbleWidth - BubbleSpacing) / 2; // Maximum possible bubble size
 
         _shooterPosition = new SKPoint(canvasWidth / 2, canvasHeight - 150);
 
