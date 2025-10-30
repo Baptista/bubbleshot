@@ -99,6 +99,29 @@ public class GameEngine
         return colors[_random.Next(numColors)];
     }
 
+    private BubbleColor GetRandomColorFromGrid()
+    {
+        // Get all unique colors currently in the grid (not popping)
+        var gridColors = new HashSet<BubbleColor>();
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (!_bubbles[i].IsPopping && _bubbles[i].Color != BubbleColor.Empty)
+            {
+                gridColors.Add(_bubbles[i].Color);
+            }
+        }
+
+        // If no bubbles in grid (shouldn't happen), use level-based colors
+        if (gridColors.Count == 0)
+        {
+            return GetRandomColor(Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6));
+        }
+
+        // Select random color from grid colors
+        var colorList = gridColors.ToArray();
+        return colorList[_random.Next(colorList.Length)];
+    }
+
     private void CreateNewBubble()
     {
         if (_nextBubble != null)
@@ -112,14 +135,16 @@ public class GameEngine
         }
         else
         {
-            var color = GetRandomColor(Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6));
+            // First bubble - use color from grid
+            var color = GetRandomColorFromGrid();
             _currentBubble = new Bubble(-1, -1, color, _shooterPosition, _bubbleRadius);
         }
     }
 
     private void CreateNextBubble()
     {
-        var color = GetRandomColor(Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6));
+        // Always select from colors that exist in the grid
+        var color = GetRandomColorFromGrid();
         // Position next bubble in bottom right corner, away from the grid
         var nextPos = new SKPoint(_canvasWidth - 70, _canvasHeight - 150);
         _nextBubble = new Bubble(-1, -1, color, nextPos, _bubbleRadius * 0.8f);  // Slightly bigger preview
