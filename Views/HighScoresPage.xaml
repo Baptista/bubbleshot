@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:BubbleShot.ViewModels"
+             xmlns:models="clr-namespace:BubbleShot.Models"
              x:Class="BubbleShot.Views.HighScoresPage"
              x:DataType="viewmodels:HighScoresViewModel"
              Title="High Scores"
@@ -33,7 +34,7 @@
                 <CollectionView ItemsSource="{Binding HighScores}"
                               IsVisible="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}">
                     <CollectionView.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:HighScore">
                             <Grid Padding="10"
                                   BackgroundColor="#2a2a3e"
                                   Margin="0,5"
