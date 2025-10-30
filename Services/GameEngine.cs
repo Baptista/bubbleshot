@@ -499,7 +499,8 @@ public class GameEngine
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
-            if (!bubble.IsPopping)
+            // Only count grid bubbles (row >= 0), not shooter bubbles (row = -1)
+            if (!bubble.IsPopping && bubble.Row >= 0)
             {
                 activeBubbleCount++;
 
