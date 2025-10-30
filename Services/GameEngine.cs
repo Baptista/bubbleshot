@@ -60,13 +60,14 @@ public class GameEngine
 
     private void CreateBubbleGrid(int level)
     {
-        int numRows = Math.Min(5 + level, MaxRows - 2);
+        // Start with only 3 rows at level 1, add 1 row every 2 levels
+        int numRows = Math.Min(3 + (level - 1) / 2, 7);  // Max 7 rows for playability
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
 
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 120;  // More space at top for UI
+        float startY = 150;  // Start higher up for more play space
 
         for (int row = 0; row < numRows; row++)
         {
@@ -194,7 +195,7 @@ public class GameEngine
         }
 
         // Check if reached top
-        if (_shootingBubblePosition.Y - _bubbleRadius <= 120)
+        if (_shootingBubblePosition.Y - _bubbleRadius <= 150)
         {
             AttachBubble(_shootingBubblePosition, _currentBubble.Color);
         }
@@ -210,7 +211,7 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 120;
+        float startY = 150;
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
@@ -246,7 +247,7 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 120;
+        float startY = 150;
 
         int row = (int)Math.Round((position.Y - startY) / (bubbleDiameter * 0.866f));
         row = Math.Max(0, Math.Min(row, MaxRows - 1));
@@ -378,8 +379,8 @@ public class GameEngine
             GameState.IsLevelComplete = true;
         }
 
-        // Check if bubbles reached bottom
-        if (activeBubbles.Any(b => b.Position.Y + _bubbleRadius > _canvasHeight - 250))
+        // Check if bubbles reached bottom - more generous threshold
+        if (activeBubbles.Any(b => b.Position.Y + _bubbleRadius > _canvasHeight - 300))
         {
             GameState.IsGameOver = true;
         }
