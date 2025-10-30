@@ -150,6 +150,30 @@ public class GameEngine
         _nextBubble = new Bubble(-1, -1, color, nextPos, _bubbleRadius * 0.8f);  // Slightly bigger preview
     }
 
+    private void ValidateNextBubbleColor()
+    {
+        // Check if next bubble's color still exists in the grid
+        if (_nextBubble == null)
+            return;
+
+        bool colorExistsInGrid = false;
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0 &&
+                _bubbles[i].Color == _nextBubble.Color)
+            {
+                colorExistsInGrid = true;
+                break;
+            }
+        }
+
+        // If next bubble's color doesn't exist in grid anymore, regenerate it
+        if (!colorExistsInGrid)
+        {
+            CreateNextBubble();
+        }
+    }
+
     public void StartShooting(SKPoint direction)
     {
         if (IsShootingInProgress || _currentBubble == null || GameState.IsPaused ||
@@ -266,6 +290,9 @@ public class GameEngine
             PopBubbles(matchingBubbles);
             RemoveOrphanedBubbles();
             GameState.AddScore(matchingBubbles.Count);
+
+            // Validate next bubble color after clearing bubbles
+            ValidateNextBubbleColor();
         }
         else
         {
