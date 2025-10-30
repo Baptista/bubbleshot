@@ -27,6 +27,10 @@ public class GameEngine
     public bool IsShootingInProgress { get; private set; }
     public SKPoint AimDirection { get; set; }
 
+    // Expose canvas dimensions for restart
+    public float CanvasWidth => _canvasWidth;
+    public float CanvasHeight => _canvasHeight;
+
     private SKPoint _shootingBubblePosition;
     private SKPoint _shootingBubbleVelocity;
 
