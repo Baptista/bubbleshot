@@ -193,21 +193,95 @@ public class GameCanvasView : SKCanvasView
 
         var start = _gameEngine.ShooterPosition;
         var direction = _gameEngine.AimDirection;
+        var canvasWidth = _gameEngine.CanvasWidth;
+        var canvasHeight = _gameEngine.CanvasHeight;
+        var bubbleRadius = _gameEngine.CurrentBubble?.Radius ?? 30;
 
         using var paint = new SKPaint
         {
-            Color = SKColors.White.WithAlpha(100),
+            Color = SKColors.White.WithAlpha(120),
             StrokeWidth = 2,
             IsAntialias = true,
             PathEffect = SKPathEffect.CreateDash(new[] { 10f, 5f }, 0)
         };
 
-        // Draw dotted line
-        var end = new SKPoint(
-            start.X + direction.X * 500,
-            start.Y + direction.Y * 500
-        );
-        canvas.DrawLine(start, end, paint);
+        // Normalize direction
+        float length = (float)Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
+        if (length == 0) return;
+
+        var normalizedDir = new SKPoint(direction.X / length, direction.Y / length);
+
+        // Draw trajectory with up to 2 bounces
+        var currentPos = start;
+        var currentDir = normalizedDir;
+        int maxBounces = 2;
+        float maxDistance = 2000; // Maximum line length
+
+        for (int bounce = 0; bounce <= maxBounces; bounce++)
+        {
+            // Calculate where line hits wall or top
+            float distanceToLeftWall = (bubbleRadius - currentPos.X) / currentDir.X;
+            float distanceToRightWall = (canvasWidth - bubbleRadius - currentPos.X) / currentDir.X;
+            float distanceToTop = (150 - currentPos.Y) / currentDir.Y; // Top grid boundary
+
+            // Find nearest collision (only consider positive distances)
+            float minDistance = maxDistance;
+            bool hitLeftWall = false;
+            bool hitRightWall = false;
+            bool hitTop = false;
+
+            if (distanceToLeftWall > 0 && distanceToLeftWall < minDistance)
+            {
+                minDistance = distanceToLeftWall;
+                hitLeftWall = true;
+                hitRightWall = false;
+                hitTop = false;
+            }
+
+            if (distanceToRightWall > 0 && distanceToRightWall < minDistance)
+            {
+                minDistance = distanceToRightWall;
+                hitLeftWall = false;
+                hitRightWall = true;
+                hitTop = false;
+            }
+
+            if (distanceToTop > 0 && distanceToTop < minDistance)
+            {
+                minDistance = distanceToTop;
+                hitLeftWall = false;
+                hitRightWall = false;
+                hitTop = true;
+            }
+
+            // Calculate end point of this segment
+            var endPoint = new SKPoint(
+                currentPos.X + currentDir.X * minDistance,
+                currentPos.Y + currentDir.Y * minDistance
+            );
+
+            // Draw this segment
+            canvas.DrawLine(currentPos, endPoint, paint);
+
+            // Stop if hit top or reached max distance
+            if (hitTop || minDistance >= maxDistance)
+                break;
+
+            // Reflect direction for next segment
+            if (hitLeftWall || hitRightWall)
+            {
+                // Reflect X direction (bounce off vertical wall)
+                currentDir = new SKPoint(-currentDir.X, currentDir.Y);
+
+                // Clamp position to wall
+                if (hitLeftWall)
+                    endPoint.X = bubbleRadius;
+                else
+                    endPoint.X = canvasWidth - bubbleRadius;
+            }
+
+            currentPos = endPoint;
+        }
     }
 
     private void DrawShooter(SKCanvas canvas)
