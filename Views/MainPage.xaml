@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:BubbleShot.ViewModels"
+             x:Class="BubbleShot.Views.MainPage"
+             x:DataType="viewmodels:MainViewModel"
+             Title="BubbleShot"
+             BackgroundColor="#1a1a2e">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+
+        <!-- Title -->
+        <VerticalStackLayout Grid.Row="0" Spacing="10" Margin="0,40,0,20">
+            <Label Text="🎯 BUBBLESHOT 🎯"
+                   FontSize="48"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   TextColor="#eee" />
+            <Label Text="Match 3 or more bubbles to pop them!"
+                   FontSize="16"
+                   HorizontalOptions="Center"
+                   TextColor="#aaa" />
+        </VerticalStackLayout>
+
+        <!-- Main Menu -->
+        <VerticalStackLayout Grid.Row="1"
+                            Spacing="20"
+                            VerticalOptions="Center"
+                            HorizontalOptions="Center">
+
+            <Button Text="START GAME"
+                    Command="{Binding StartGameCommand}"
+                    WidthRequest="250"
+                    HeightRequest="60"
+                    FontSize="20"
+                    FontAttributes="Bold"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="15" />
+
+            <Button Text="HIGH SCORES"
+                    Command="{Binding ViewHighScoresCommand}"
+                    WidthRequest="250"
+                    HeightRequest="60"
+                    FontSize="20"
+                    FontAttributes="Bold"
+                    BackgroundColor="#2196F3"
+                    TextColor="White"
+                    CornerRadius="15" />
+
+        </VerticalStackLayout>
+
+        <!-- Footer -->
+        <Label Grid.Row="2"
+               Text="Made with .NET MAUI + SkiaSharp"
+               FontSize="12"
+               HorizontalOptions="Center"
+               TextColor="#666"
+               Margin="0,0,0,20" />
+    </Grid>
+
+</ContentPage>

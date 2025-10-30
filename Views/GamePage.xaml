@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:BubbleShot.ViewModels"
+             xmlns:controls="clr-namespace:BubbleShot.Controls"
+             x:Class="BubbleShot.Views.GamePage"
+             x:DataType="viewmodels:GameViewModel"
+             Title="BubbleShot Game"
+             NavigationPage.HasNavigationBar="False">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- Game Canvas -->
+        <controls:GameCanvasView x:Name="GameCanvas"
+                                Grid.Row="0"
+                                BackgroundColor="Black" />
+
+        <!-- Bottom Controls -->
+        <Grid Grid.Row="1"
+              BackgroundColor="#1a1a2e"
+              Padding="10"
+              ColumnDefinitions="*,*,*,*">
+
+            <Button Grid.Column="0"
+                    Text="⏸️ Pause"
+                    Command="{Binding PauseCommand}"
+                    BackgroundColor="#FF9800"
+                    TextColor="White"
+                    CornerRadius="10"
+                    Margin="5" />
+
+            <Button Grid.Column="1"
+                    Text="▶️ Resume"
+                    Command="{Binding ResumeCommand}"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="10"
+                    Margin="5" />
+
+            <Button Grid.Column="2"
+                    Text="🔄 Restart"
+                    Command="{Binding RestartCommand}"
+                    BackgroundColor="#2196F3"
+                    TextColor="White"
+                    CornerRadius="10"
+                    Margin="5" />
+
+            <Button Grid.Column="3"
+                    Text="⬅️ Back"
+                    Command="{Binding BackToMenuCommand}"
+                    BackgroundColor="#F44336"
+                    TextColor="White"
+                    CornerRadius="10"
+                    Margin="5" />
+        </Grid>
+
+        <!-- Level Complete Overlay -->
+        <Grid Grid.RowSpan="2"
+              IsVisible="{Binding GameEngine.GameState.IsLevelComplete}"
+              BackgroundColor="#80000000">
+            <Button Text="➡️ NEXT LEVEL"
+                    Command="{Binding NextLevelCommand}"
+                    WidthRequest="200"
+                    HeightRequest="60"
+                    FontSize="20"
+                    FontAttributes="Bold"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="15"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center" />
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
