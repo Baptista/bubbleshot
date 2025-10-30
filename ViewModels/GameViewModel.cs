@@ -25,6 +25,13 @@ public class GameViewModel : BaseViewModel
         set => SetProperty(ref _statusMessage, value);
     }
 
+    private bool _isLevelComplete;
+    public bool IsLevelComplete
+    {
+        get => _isLevelComplete;
+        set => SetProperty(ref _isLevelComplete, value);
+    }
+
     public GameViewModel(DatabaseService databaseService)
     {
         _databaseService = databaseService;
@@ -42,6 +49,7 @@ public class GameViewModel : BaseViewModel
     {
         _currentLevel = level;
         _gameEngine.InitializeGame(width, height, level);
+        IsLevelComplete = false;
         UpdateStatus();
     }
 
@@ -65,6 +73,7 @@ public class GameViewModel : BaseViewModel
     {
         // Use canvas dimensions from the engine (set during first init)
         _gameEngine.InitializeGame(_gameEngine.CanvasWidth, _gameEngine.CanvasHeight, _currentLevel);
+        IsLevelComplete = false;
         UpdateStatus();
     }
 
@@ -73,6 +82,7 @@ public class GameViewModel : BaseViewModel
         _currentLevel++;
         // Use canvas dimensions from the engine (set during first init)
         _gameEngine.InitializeGame(_gameEngine.CanvasWidth, _gameEngine.CanvasHeight, _currentLevel);
+        IsLevelComplete = false;
         UpdateStatus();
         ((Command)NextLevelCommand).ChangeCanExecute();
     }
@@ -113,6 +123,7 @@ public class GameViewModel : BaseViewModel
         }
         else if (_gameEngine.GameState.IsLevelComplete)
         {
+            IsLevelComplete = true;
             StatusMessage = "Level Complete! Tap Next Level to continue.";
             ((Command)NextLevelCommand).ChangeCanExecute();
         }
