@@ -49,4 +49,8 @@
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.9" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Temp\" />
+	</ItemGroup>
+
 </Project>
