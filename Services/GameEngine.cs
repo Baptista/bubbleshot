@@ -152,13 +152,17 @@ public class GameEngine
 
     private void UpdatePoppingAnimation(float deltaTime)
     {
-        var poppingBubbles = _bubbles.Where(b => b.IsPopping).ToList();
-        foreach (var bubble in poppingBubbles)
+        // Avoid LINQ allocation - use for loop with manual removal
+        for (int i = _bubbles.Count - 1; i >= 0; i--)
         {
-            bubble.PopAnimationProgress += deltaTime * 3;
-            if (bubble.PopAnimationProgress >= 1)
+            var bubble = _bubbles[i];
+            if (bubble.IsPopping)
             {
-                _bubbles.Remove(bubble);
+                bubble.PopAnimationProgress += deltaTime * 3;
+                if (bubble.PopAnimationProgress >= 1)
+                {
+                    _bubbles.RemoveAt(i);
+                }
             }
         }
     }
@@ -184,9 +188,14 @@ public class GameEngine
             _shootingBubbleVelocity.X *= -1;
         }
 
-        // Check collision with existing bubbles
-        foreach (var bubble in _bubbles.Where(b => !b.IsPopping))
+        // Check collision with existing bubbles - optimize with early exit and no LINQ
+        int bubbleCount = _bubbles.Count;
+        for (int i = 0; i < bubbleCount; i++)
         {
+            var bubble = _bubbles[i];
+            if (bubble.IsPopping)
+                continue;
+
             if (bubble.CollidesWith(_shootingBubblePosition, _bubbleRadius))
             {
                 AttachBubble(_shootingBubblePosition, _currentBubble.Color);
@@ -242,6 +251,16 @@ public class GameEngine
         CreateNextBubble();
     }
 
+    private bool IsPositionOccupied(int row, int col)
+    {
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (_bubbles[i].Row == row && _bubbles[i].Col == col && !_bubbles[i].IsPopping)
+                return true;
+        }
+        return false;
+    }
+
     private (int row, int col) FindClosestGridPosition(SKPoint position)
     {
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
@@ -256,8 +275,8 @@ public class GameEngine
         int col = (int)Math.Round((position.X - startX - offsetX) / bubbleDiameter);
         col = Math.Max(0, Math.Min(col, MaxCols - 1));
 
-        // Check if position is occupied - find nearest empty spot
-        if (_bubbles.Any(b => b.Row == row && b.Col == col && !b.IsPopping))
+        // Check if position is occupied - find nearest empty spot (optimized)
+        if (IsPositionOccupied(row, col))
         {
             // Try to find empty adjacent positions
             var candidates = new List<(int row, int col, float distance)>();
@@ -271,8 +290,8 @@ public class GameEngine
 
                 for (int c = Math.Max(0, colStart); c <= Math.Min(MaxCols - 1, colEnd); c++)
                 {
-                    // Skip if occupied
-                    if (_bubbles.Any(b => b.Row == r && b.Col == c && !b.IsPopping))
+                    // Skip if occupied (optimized)
+                    if (IsPositionOccupied(r, c))
                         continue;
 
                     // Calculate distance from original position
@@ -295,8 +314,8 @@ public class GameEngine
             }
             else
             {
-                // Fallback: move up until we find empty spot
-                while (_bubbles.Any(b => b.Row == row && b.Col == col && !b.IsPopping) && row > 0)
+                // Fallback: move up until we find empty spot (optimized)
+                while (IsPositionOccupied(row, col) && row > 0)
                 {
                     row--;
                     offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
@@ -358,12 +377,15 @@ public class GameEngine
             int newRow = row + rowOffset;
             int newCol = col + colOffset;
 
-            var neighbor = _bubbles.FirstOrDefault(b =>
-                b.Row == newRow && b.Col == newCol && !b.IsPopping);
-
-            if (neighbor != null)
+            // Optimized - no LINQ, manual search
+            for (int i = 0; i < _bubbles.Count; i++)
             {
-                neighbors.Add(neighbor);
+                var candidate = _bubbles[i];
+                if (candidate.Row == newRow && candidate.Col == newCol && !candidate.IsPopping)
+                {
+                    neighbors.Add(candidate);
+                    break; // Found the neighbor, move to next offset
+                }
             }
         }
 
@@ -384,12 +406,15 @@ public class GameEngine
         var connected = new HashSet<Bubble>();
         var toCheck = new Queue<Bubble>();
 
-        // Start from top row
-        var topBubbles = _bubbles.Where(b => b.Row == 0 && !b.IsPopping).ToList();
-        foreach (var bubble in topBubbles)
+        // Start from top row (optimized - no LINQ)
+        for (int i = 0; i < _bubbles.Count; i++)
         {
-            toCheck.Enqueue(bubble);
-            connected.Add(bubble);
+            var bubble = _bubbles[i];
+            if (bubble.Row == 0 && !bubble.IsPopping)
+            {
+                toCheck.Enqueue(bubble);
+                connected.Add(bubble);
+            }
         }
 
         int safetyCounter = 0;
@@ -412,26 +437,52 @@ public class GameEngine
             }
         }
 
-        // Pop orphaned bubbles
-        var orphaned = _bubbles.Where(b => !connected.Contains(b) && !b.IsPopping).ToList();
-        if (orphaned.Count > 0)
+        // Pop orphaned bubbles (optimized - no LINQ allocation)
+        int orphanedCount = 0;
+        for (int i = 0; i < _bubbles.Count; i++)
         {
-            PopBubbles(orphaned);
-            GameState.AddScore(orphaned.Count * 2); // Bonus points for dropped bubbles
+            var bubble = _bubbles[i];
+            if (!connected.Contains(bubble) && !bubble.IsPopping)
+            {
+                bubble.IsPopping = true;
+                bubble.PopAnimationProgress = 0;
+                orphanedCount++;
+            }
+        }
+
+        if (orphanedCount > 0)
+        {
+            GameState.AddScore(orphanedCount * 2); // Bonus points for dropped bubbles
         }
     }
 
     private void CheckGameConditions()
     {
-        var activeBubbles = _bubbles.Where(b => !b.IsPopping).ToList();
+        // Optimized - count active bubbles and check bottom in one pass
+        int activeBubbleCount = 0;
+        bool reachedBottom = false;
+        float bottomThreshold = _canvasHeight - 300;
 
-        if (activeBubbles.Count == 0)
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            var bubble = _bubbles[i];
+            if (!bubble.IsPopping)
+            {
+                activeBubbleCount++;
+
+                if (bubble.Position.Y + _bubbleRadius > bottomThreshold)
+                {
+                    reachedBottom = true;
+                }
+            }
+        }
+
+        if (activeBubbleCount == 0)
         {
             GameState.IsLevelComplete = true;
         }
 
-        // Check if bubbles reached bottom - more generous threshold
-        if (activeBubbles.Any(b => b.Position.Y + _bubbleRadius > _canvasHeight - 300))
+        if (reachedBottom)
         {
             GameState.IsGameOver = true;
         }
