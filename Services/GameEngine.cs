@@ -6,8 +6,8 @@ namespace BubbleShot.Services;
 public class GameEngine
 {
     private const int MaxRows = 12;
-    private const int MaxCols = 8;
-    private const float BubbleSpacing = 3f;
+    private const int MaxCols = 7;  // Reduced from 8 for bigger bubbles
+    private const float BubbleSpacing = 2f;  // Reduced spacing
     private const float ShootSpeed = 1000f;
 
     private List<Bubble> _bubbles;
@@ -43,11 +43,11 @@ public class GameEngine
         _canvasWidth = canvasWidth;
         _canvasHeight = canvasHeight;
 
-        // Calculate bubble radius based on canvas width for better fit
-        float maxBubbleWidth = (_canvasWidth - 40) / MaxCols; // 40px total margin
-        _bubbleRadius = Math.Min(maxBubbleWidth / 2.3f, 35f); // Max 35px radius
+        // Calculate bubble radius for much larger bubbles - use more screen space
+        float maxBubbleWidth = (_canvasWidth - 20) / MaxCols; // Reduced margin for bigger bubbles
+        _bubbleRadius = maxBubbleWidth / 2.05f; // Much larger bubbles, no artificial cap
 
-        _shooterPosition = new SKPoint(canvasWidth / 2, canvasHeight - 120);
+        _shooterPosition = new SKPoint(canvasWidth / 2, canvasHeight - 150);
 
         GameState = new GameState { CurrentLevel = level };
         _bubbles.Clear();
@@ -66,7 +66,7 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 80;
+        float startY = 120;  // More space at top for UI
 
         for (int row = 0; row < numRows; row++)
         {
@@ -116,8 +116,8 @@ public class GameEngine
     {
         var color = GetRandomColor(Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6));
         // Position next bubble in bottom right corner, away from the grid
-        var nextPos = new SKPoint(_canvasWidth - 60, _canvasHeight - 120);
-        _nextBubble = new Bubble(-1, -1, color, nextPos, _bubbleRadius * 0.7f);
+        var nextPos = new SKPoint(_canvasWidth - 70, _canvasHeight - 150);
+        _nextBubble = new Bubble(-1, -1, color, nextPos, _bubbleRadius * 0.8f);  // Slightly bigger preview
     }
 
     public void StartShooting(SKPoint direction)
@@ -194,7 +194,7 @@ public class GameEngine
         }
 
         // Check if reached top
-        if (_shootingBubblePosition.Y - _bubbleRadius <= 80)
+        if (_shootingBubblePosition.Y - _bubbleRadius <= 120)
         {
             AttachBubble(_shootingBubblePosition, _currentBubble.Color);
         }
@@ -210,7 +210,7 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 80;
+        float startY = 120;
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
@@ -246,7 +246,7 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 80;
+        float startY = 120;
 
         int row = (int)Math.Round((position.Y - startY) / (bubbleDiameter * 0.866f));
         row = Math.Max(0, Math.Min(row, MaxRows - 1));
@@ -379,7 +379,7 @@ public class GameEngine
         }
 
         // Check if bubbles reached bottom
-        if (activeBubbles.Any(b => b.Position.Y + _bubbleRadius > _canvasHeight - 200))
+        if (activeBubbles.Any(b => b.Position.Y + _bubbleRadius > _canvasHeight - 250))
         {
             GameState.IsGameOver = true;
         }
