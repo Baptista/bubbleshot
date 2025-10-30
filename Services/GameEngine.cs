@@ -152,7 +152,8 @@ public class GameEngine
 
     public void StartShooting(SKPoint direction)
     {
-        if (IsShootingInProgress || _currentBubble == null || GameState.IsPaused || GameState.IsGameOver)
+        if (IsShootingInProgress || _currentBubble == null || GameState.IsPaused ||
+            GameState.IsGameOver || GameState.IsLevelComplete)
             return;
 
         IsShootingInProgress = true;
@@ -168,7 +169,7 @@ public class GameEngine
 
     public void Update(float deltaTime)
     {
-        if (GameState.IsPaused || GameState.IsGameOver)
+        if (GameState.IsPaused || GameState.IsGameOver || GameState.IsLevelComplete)
             return;
 
         UpdatePoppingAnimation(deltaTime);
@@ -274,10 +275,13 @@ public class GameEngine
         // Check win/lose conditions
         CheckGameConditions();
 
-        // Prepare next bubble
+        // Prepare next bubble (only if game is still active)
         IsShootingInProgress = false;
-        CreateNewBubble();
-        CreateNextBubble();
+        if (!GameState.IsLevelComplete && !GameState.IsGameOver)
+        {
+            CreateNewBubble();
+            CreateNextBubble();
+        }
     }
 
     private bool IsPositionOccupied(int row, int col)

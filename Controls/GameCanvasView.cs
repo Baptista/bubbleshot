@@ -381,7 +381,8 @@ public class GameCanvasView : SKCanvasView
     private void OnTouch(object? sender, SKTouchEventArgs e)
     {
         if (_gameEngine == null || _gameEngine.GameState.IsGameOver ||
-            _gameEngine.GameState.IsPaused || _gameEngine.IsShootingInProgress)
+            _gameEngine.GameState.IsPaused || _gameEngine.IsShootingInProgress ||
+            _gameEngine.GameState.IsLevelComplete)
         {
             e.Handled = true;
             return;
