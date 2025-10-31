@@ -330,7 +330,7 @@ public class GameEngine
             _shootingBubbleVelocity.X *= -1;
         }
 
-        // Check collision with existing bubbles - optimize with early exit and no LINQ
+        // Check collision with existing bubbles
         int bubbleCount = _bubbles.Count;
         for (int i = 0; i < bubbleCount; i++)
         {
@@ -345,29 +345,8 @@ public class GameEngine
             }
         }
 
-        // Find the topmost (lowest Y) visible bubble position
-        float topmostBubbleY = float.MaxValue;
-        for (int i = 0; i < _bubbles.Count; i++)
-        {
-            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
-            {
-                if (_bubbles[i].Position.Y < topmostBubbleY)
-                {
-                    topmostBubbleY = _bubbles[i].Position.Y;
-                }
-            }
-        }
-
-        // Only attach at top if bubble reached the topmost existing bubble
-        if (topmostBubbleY != float.MaxValue && _shootingBubblePosition.Y - _bubbleRadius <= topmostBubbleY)
-        {
-            AttachBubble(_shootingBubblePosition, _currentBubble.Color);
-            return;
-        }
-
-        // Safety check: if bubble somehow escaped bounds, attach it to nearest position
-        if (_shootingBubblePosition.Y < 0 || _shootingBubblePosition.Y > _canvasHeight ||
-            _shootingBubblePosition.X < 0 || _shootingBubblePosition.X > _canvasWidth)
+        // Check if reached the top boundary (above all bubbles)
+        if (_shootingBubblePosition.Y - _bubbleRadius <= _gridStartY)
         {
             AttachBubble(_shootingBubblePosition, _currentBubble.Color);
             return;
