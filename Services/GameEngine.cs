@@ -5,7 +5,6 @@ namespace BubbleShot.Services;
 
 public class GameEngine
 {
-    private const int MaxRows = 12;
     private const int MaxCols = 7;  // Reduced from 8 for bigger bubbles
     private const float BubbleSpacing = 2f;  // Reduced spacing
     private const float ShootSpeed = 1000f;
@@ -22,6 +21,7 @@ public class GameEngine
     private float _gridOffsetY;  // Tracks how much the grid has scrolled down
     private float _gridStartY;   // Top of visible area
     private float _gridRow0Y;    // Current Y position where row 0 is located
+    private int _totalRows;      // Total number of rows in current level
 
     public GameState GameState { get; private set; }
     public List<Bubble> Bubbles => _bubbles;
@@ -69,7 +69,7 @@ public class GameEngine
     private void CreateBubbleGrid(int level)
     {
         // Create many more rows total - starts at 10 rows, increases with level
-        int totalRows = Math.Min(10 + level * 2, 25);  // Level 1: 12 rows, increases to max 25
+        _totalRows = Math.Min(10 + level * 2, 25);  // Level 1: 12 rows, increases to max 25
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
 
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
@@ -81,11 +81,11 @@ public class GameEngine
         _gridStartY = 150;  // Top of visible area
 
         // Position grid so most rows are above screen (will scroll down as cleared)
-        float totalGridHeight = totalRows * bubbleDiameter * 0.866f;
+        float totalGridHeight = _totalRows * bubbleDiameter * 0.866f;
         _gridRow0Y = _gridStartY - (totalGridHeight - visibleGridHeight);  // Where row 0 starts
         _gridOffsetY = 0;  // No scroll offset initially
 
-        for (int row = 0; row < totalRows; row++)
+        for (int row = 0; row < _totalRows; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
             int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
@@ -325,10 +325,34 @@ public class GameEngine
         }
 
         // Check if reached top of visible grid
+        // Only attach at top if there are already bubbles in the visible area to attach to
         if (_shootingBubblePosition.Y - _bubbleRadius <= _gridStartY)
         {
-            AttachBubble(_shootingBubblePosition, _currentBubble.Color);
-            return;
+            // Find the lowest bubble Y position in visible grid
+            float lowestBubbleY = float.MaxValue;
+            bool hasBubblesInVisibleArea = false;
+
+            for (int i = 0; i < _bubbles.Count; i++)
+            {
+                if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
+                {
+                    if (_bubbles[i].Position.Y < lowestBubbleY)
+                    {
+                        lowestBubbleY = _bubbles[i].Position.Y;
+                    }
+                    if (_bubbles[i].Position.Y >= _gridStartY)
+                    {
+                        hasBubblesInVisibleArea = true;
+                    }
+                }
+            }
+
+            // Only attach if we're near existing bubbles OR if bubbles exist in visible area
+            if (hasBubblesInVisibleArea || _shootingBubblePosition.Y >= lowestBubbleY - _bubbleRadius * 3)
+            {
+                AttachBubble(_shootingBubblePosition, _currentBubble.Color);
+                return;
+            }
         }
 
         // Safety check: if bubble somehow escaped bounds, attach it to nearest position
@@ -402,7 +426,7 @@ public class GameEngine
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
 
         int row = (int)Math.Round((position.Y - _gridRow0Y) / (bubbleDiameter * 0.866f));
-        row = Math.Max(0, Math.Min(row, MaxRows - 1));
+        row = Math.Max(0, Math.Min(row, _totalRows - 1));
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
@@ -417,7 +441,7 @@ public class GameEngine
             var candidates = new List<(int row, int col, float distance)>();
 
             // Check all nearby positions in a 3x3 grid
-            for (int r = Math.Max(0, row - 1); r <= Math.Min(MaxRows - 1, row + 1); r++)
+            for (int r = Math.Max(0, row - 1); r <= Math.Min(_totalRows - 1, row + 1); r++)
             {
                 bool rIsOdd = r % 2 == 1;
                 int maxColForR = rIsOdd ? MaxCols - 2 : MaxCols - 1;
