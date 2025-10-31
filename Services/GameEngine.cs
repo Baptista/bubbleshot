@@ -9,6 +9,7 @@ public class GameEngine
     private const int MaxCols = 7;  // Reduced from 8 for bigger bubbles
     private const float BubbleSpacing = 2f;  // Reduced spacing
     private const float ShootSpeed = 1000f;
+    private const float VisibleRows = 5.5f;  // Number of rows visible on screen at once
 
     private List<Bubble> _bubbles;
     private Bubble? _currentBubble;
@@ -18,6 +19,8 @@ public class GameEngine
     private float _canvasHeight;
     private Random _random;
     private float _bubbleRadius;
+    private float _gridOffsetY;  // Tracks how much the grid has scrolled down
+    private float _gridStartY;   // Initial Y position of the grid
 
     public GameState GameState { get; private set; }
     public List<Bubble> Bubbles => _bubbles;
@@ -64,16 +67,24 @@ public class GameEngine
 
     private void CreateBubbleGrid(int level)
     {
-        // Start with only 3 rows at level 1, add 1 row every 2 levels
-        int numRows = Math.Min(3 + (level - 1) / 2, 7);  // Max 7 rows for playability
+        // Create many more rows total - starts at 10 rows, increases with level
+        int totalRows = Math.Min(10 + level * 2, 25);  // Level 1: 12 rows, increases to max 25
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
 
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 150;  // Start higher up for more play space
 
-        for (int row = 0; row < numRows; row++)
+        // Calculate where grid should start so only bottom ~5.5 rows are visible
+        float visibleGridHeight = VisibleRows * bubbleDiameter * 0.866f;
+        _gridStartY = 150;  // Top of visible area
+
+        // Position grid so most rows are above screen (will scroll down as cleared)
+        float totalGridHeight = totalRows * bubbleDiameter * 0.866f;
+        float gridTopY = _gridStartY - (totalGridHeight - visibleGridHeight);
+        _gridOffsetY = 0;  // No scroll offset initially
+
+        for (int row = 0; row < totalRows; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
             int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
@@ -82,7 +93,7 @@ public class GameEngine
             for (int col = 0; col < colsInRow; col++)
             {
                 float x = startX + col * bubbleDiameter + offsetX;
-                float y = startY + row * bubbleDiameter * 0.866f; // hexagonal spacing
+                float y = gridTopY + row * bubbleDiameter * 0.866f;
 
                 var color = GetRandomColor(numColors);
                 var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
@@ -225,10 +236,53 @@ public class GameEngine
             }
         }
 
+        // Check if we should scroll the grid down after removing bubbles
+        if (anyRemoved)
+        {
+            ScrollGridIfNeeded();
+        }
+
         // Re-check game conditions after removing bubbles to ensure level complete is detected
         if (anyRemoved && !GameState.IsLevelComplete && !GameState.IsGameOver)
         {
             CheckGameConditions();
+        }
+    }
+
+    private void ScrollGridIfNeeded()
+    {
+        // Find the lowest row that still has bubbles
+        int lowestRowWithBubbles = -1;
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
+            {
+                if (lowestRowWithBubbles == -1 || _bubbles[i].Row < lowestRowWithBubbles)
+                {
+                    lowestRowWithBubbles = _bubbles[i].Row;
+                }
+            }
+        }
+
+        // If lowest row is above row 0, we have cleared some rows - scroll down
+        if (lowestRowWithBubbles > 0)
+        {
+            float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
+            float scrollAmount = lowestRowWithBubbles * bubbleDiameter * 0.866f;
+
+            // Move all bubbles down
+            for (int i = 0; i < _bubbles.Count; i++)
+            {
+                _bubbles[i].Position = new SKPoint(
+                    _bubbles[i].Position.X,
+                    _bubbles[i].Position.Y + scrollAmount
+                );
+
+                // Update row number (shift all rows down)
+                _bubbles[i].Row -= lowestRowWithBubbles;
+            }
+
+            _gridOffsetY += scrollAmount;
         }
     }
 
@@ -268,8 +322,8 @@ public class GameEngine
             }
         }
 
-        // Check if reached top
-        if (_shootingBubblePosition.Y - _bubbleRadius <= 150)
+        // Check if reached top of visible grid
+        if (_shootingBubblePosition.Y - _bubbleRadius <= _gridStartY)
         {
             AttachBubble(_shootingBubblePosition, _currentBubble.Color);
             return;
@@ -294,11 +348,10 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 150;
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
-        float gridY = startY + row * bubbleDiameter * 0.866f;
+        float gridY = _gridStartY + row * bubbleDiameter * 0.866f;
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
@@ -345,9 +398,8 @@ public class GameEngine
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 150;
 
-        int row = (int)Math.Round((position.Y - startY) / (bubbleDiameter * 0.866f));
+        int row = (int)Math.Round((position.Y - _gridStartY) / (bubbleDiameter * 0.866f));
         row = Math.Max(0, Math.Min(row, MaxRows - 1));
 
         bool isOddRow = row % 2 == 1;
@@ -379,7 +431,7 @@ public class GameEngine
                     // Calculate distance from original position
                     float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
                     float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
-                    float candidateY = startY + r * bubbleDiameter * 0.866f;
+                    float candidateY = _gridStartY + r * bubbleDiameter * 0.866f;
                     float dist = (position.X - candidateX) * (position.X - candidateX) +
                                  (position.Y - candidateY) * (position.Y - candidateY);
 
