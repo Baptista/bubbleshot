@@ -308,11 +308,16 @@ public class GameEngine
         }
 
         // Check collision with existing bubbles - optimize with early exit and no LINQ
+        // Only check bubbles that are in the visible play area
         int bubbleCount = _bubbles.Count;
         for (int i = 0; i < bubbleCount; i++)
         {
             var bubble = _bubbles[i];
             if (bubble.IsPopping)
+                continue;
+
+            // Skip bubbles that are above the visible play area
+            if (bubble.Position.Y < _gridStartY - _bubbleRadius)
                 continue;
 
             if (bubble.CollidesWith(_shootingBubblePosition, _bubbleRadius))
