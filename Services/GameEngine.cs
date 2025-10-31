@@ -557,11 +557,21 @@ public class GameEngine
         var connected = new HashSet<Bubble>();
         var toCheck = new Queue<Bubble>();
 
-        // Start from top row (optimized - no LINQ)
+        // Find the lowest row number (topmost bubbles)
+        int lowestRow = int.MaxValue;
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0 && _bubbles[i].Row < lowestRow)
+            {
+                lowestRow = _bubbles[i].Row;
+            }
+        }
+
+        // Start from topmost row (optimized - no LINQ)
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
-            if (bubble.Row == 0 && !bubble.IsPopping)
+            if (bubble.Row == lowestRow && !bubble.IsPopping)
             {
                 toCheck.Enqueue(bubble);
                 connected.Add(bubble);
