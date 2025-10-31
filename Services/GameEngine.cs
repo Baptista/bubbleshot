@@ -75,7 +75,8 @@ public class GameEngine
 
         for (int row = 0; row < numRows; row++)
         {
-            int colsInRow = MaxCols;
+            // Odd rows have one fewer column to stay within bounds when offset
+            int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
             float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
 
             for (int col = 0; col < colsInRow; col++)
@@ -331,9 +332,11 @@ public class GameEngine
         int row = (int)Math.Round((position.Y - startY) / (bubbleDiameter * 0.866f));
         row = Math.Max(0, Math.Min(row, MaxRows - 1));
 
-        float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
+        bool isOddRow = row % 2 == 1;
+        int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
+        float offsetX = isOddRow ? bubbleDiameter / 2 : 0;
         int col = (int)Math.Round((position.X - startX - offsetX) / bubbleDiameter);
-        col = Math.Max(0, Math.Min(col, MaxCols - 1));
+        col = Math.Max(0, Math.Min(col, maxColForRow));
 
         // Check if position is occupied - find nearest empty spot (optimized)
         if (IsPositionOccupied(row, col))
@@ -344,11 +347,12 @@ public class GameEngine
             // Check all nearby positions in a 3x3 grid
             for (int r = Math.Max(0, row - 1); r <= Math.Min(MaxRows - 1, row + 1); r++)
             {
-                bool isOddRow = r % 2 == 1;
-                int colStart = isOddRow ? Math.Max(0, col - 1) : col - 1;
-                int colEnd = isOddRow ? col + 1 : Math.Min(MaxCols - 1, col + 1);
+                bool rIsOdd = r % 2 == 1;
+                int maxColForR = rIsOdd ? MaxCols - 2 : MaxCols - 1;
+                int colStart = rIsOdd ? Math.Max(0, col - 1) : col - 1;
+                int colEnd = Math.Min(maxColForR, rIsOdd ? col + 1 : col + 1);
 
-                for (int c = Math.Max(0, colStart); c <= Math.Min(MaxCols - 1, colEnd); c++)
+                for (int c = Math.Max(0, colStart); c <= colEnd; c++)
                 {
                     // Skip if occupied (optimized)
                     if (IsPositionOccupied(r, c))
