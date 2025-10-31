@@ -21,12 +21,11 @@ public partial class GamePage : ContentPage
         GameCanvas.GameEngine = _viewModel.GameEngine;
         GameCanvas.StartGameLoop();
 
-        // Monitor game state
+        // Monitor game state - only stop timer on game over, not level complete
         Dispatcher.StartTimer(TimeSpan.FromMilliseconds(100), () =>
         {
             _viewModel.CheckGameState();
-            return !_viewModel.GameEngine.GameState.IsGameOver &&
-                   !_viewModel.GameEngine.GameState.IsLevelComplete;
+            return !_viewModel.GameEngine.GameState.IsGameOver;
         });
     }
 
