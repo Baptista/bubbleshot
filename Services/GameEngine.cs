@@ -68,22 +68,19 @@ public class GameEngine
 
     private void CreateBubbleGrid(int level)
     {
-        // Create many more rows total - starts at 10 rows, increases with level
-        _totalRows = Math.Min(10 + level * 2, 25);  // Level 1: 12 rows, increases to max 25
+        // Start with visible rows only - no hidden rows above
+        int initialRows = Math.Min(4 + (level - 1) / 2, 6);  // Level 1: 4 rows, increases to max 6 visible rows
+        _totalRows = initialRows;
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
 
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
 
-        // Calculate where grid should start so only bottom ~5.5 rows are visible
-        float visibleGridHeight = VisibleRows * bubbleDiameter * 0.866f;
-        _gridStartY = 150;  // Top of visible area
-
-        // Position grid so most rows are above screen (will scroll down as cleared)
-        float totalGridHeight = _totalRows * bubbleDiameter * 0.866f;
-        _gridRow0Y = _gridStartY - (totalGridHeight - visibleGridHeight);  // Where row 0 starts
-        _gridOffsetY = 0;  // No scroll offset initially
+        // Start at top of visible area - ALL bubbles visible from start
+        _gridStartY = 150;
+        _gridRow0Y = _gridStartY;  // Row 0 starts at top of visible area
+        _gridOffsetY = 0;
 
         for (int row = 0; row < _totalRows; row++)
         {
@@ -265,13 +262,36 @@ public class GameEngine
             }
         }
 
-        // If lowest row is above row 0, we have cleared some rows - scroll down
+        // If lowest row is above row 0, we have cleared some rows
         if (lowestRowWithBubbles > 0)
         {
+            int rowsCleared = lowestRowWithBubbles;
             float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
-            float scrollAmount = lowestRowWithBubbles * bubbleDiameter * 0.866f;
+            float scrollAmount = rowsCleared * bubbleDiameter * 0.866f;
 
-            // Move all bubbles down
+            // Add new rows from above BEFORE scrolling
+            float gridWidth = MaxCols * bubbleDiameter;
+            float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
+            int numColors = Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6);
+
+            // Add new rows at negative row numbers (above row 0)
+            for (int row = -rowsCleared; row < 0; row++)
+            {
+                int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
+                float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
+
+                for (int col = 0; col < colsInRow; col++)
+                {
+                    float x = startX + col * bubbleDiameter + offsetX;
+                    float y = _gridRow0Y + row * bubbleDiameter * 0.866f;
+
+                    var color = GetRandomColorFromGrid();
+                    var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
+                    _bubbles.Add(bubble);
+                }
+            }
+
+            // NOW scroll everything down
             for (int i = 0; i < _bubbles.Count; i++)
             {
                 _bubbles[i].Position = new SKPoint(
@@ -284,7 +304,8 @@ public class GameEngine
             }
 
             _gridOffsetY += scrollAmount;
-            _gridRow0Y += scrollAmount;  // Update row 0 position after scroll
+            _gridRow0Y += scrollAmount;
+            _totalRows += rowsCleared;  // Increase total row count
         }
     }
 
@@ -367,22 +388,6 @@ public class GameEngine
 
         float gridX = startX + col * bubbleDiameter + offsetX;
         float gridY = _gridRow0Y + row * bubbleDiameter * 0.866f;
-
-        // SAFETY: Ensure bubble is attached in visible area
-        // If calculated position is above visible area, clamp it to visible area
-        if (gridY < _gridStartY)
-        {
-            // Recalculate row to be at the visible boundary
-            row = (int)Math.Round((_gridStartY - _gridRow0Y) / (bubbleDiameter * 0.866f));
-            row = Math.Max(0, Math.Min(row, _totalRows - 1));
-
-            // Recalculate position with corrected row
-            offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
-            gridX = startX + col * bubbleDiameter + offsetX;
-            gridY = _gridRow0Y + row * bubbleDiameter * 0.866f;
-        }
-
-        System.Diagnostics.Debug.WriteLine($"Attaching bubble at Row={row}, Y={gridY}, GridStartY={_gridStartY}, Visible={gridY >= _gridStartY}");
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
