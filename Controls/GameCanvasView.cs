@@ -12,6 +12,14 @@ public class GameCanvasView : SKCanvasView
     private bool _isRunning;
     private bool _isInitialized;
 
+    // Reusable paint objects to reduce garbage collection
+    private readonly SKPaint _bubblePaint = new SKPaint { IsAntialias = true };
+    private readonly SKPaint _highlightPaint = new SKPaint { IsAntialias = true, Color = SKColors.White.WithAlpha(100) };
+    private readonly SKPaint _borderPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
+    private readonly SKPaint _ringPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 3 };
+    private readonly SKPaint _textPaint = new SKPaint { IsAntialias = true, Color = SKColors.White, TextSize = 24, FakeBoldText = true };
+    private readonly SKPaint _comboPaint = new SKPaint { IsAntialias = true, Color = SKColors.Yellow, TextSize = 28, FakeBoldText = true };
+
     public GameEngine? GameEngine
     {
         get => _gameEngine;
@@ -97,23 +105,12 @@ public class GameCanvasView : SKCanvasView
                 float scale = 1 - bubble.PopAnimationProgress;
                 float alpha = 1 - bubble.PopAnimationProgress;
 
-                using var paint = new SKPaint
-                {
-                    Color = bubble.GetSKColor().WithAlpha((byte)(alpha * 255)),
-                    IsAntialias = true
-                };
-
-                canvas.DrawCircle(bubble.Position, bubble.Radius * scale, paint);
+                _bubblePaint.Color = bubble.GetSKColor().WithAlpha((byte)(alpha * 255));
+                canvas.DrawCircle(bubble.Position, bubble.Radius * scale, _bubblePaint);
 
                 // Outer ring
-                using var ringPaint = new SKPaint
-                {
-                    Color = SKColors.White.WithAlpha((byte)(alpha * 128)),
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 3,
-                    IsAntialias = true
-                };
-                canvas.DrawCircle(bubble.Position, bubble.Radius * scale * 1.2f, ringPaint);
+                _ringPaint.Color = SKColors.White.WithAlpha((byte)(alpha * 128));
+                canvas.DrawCircle(bubble.Position, bubble.Radius * scale * 1.2f, _ringPaint);
             }
             else
             {
@@ -124,37 +121,25 @@ public class GameCanvasView : SKCanvasView
 
     private void DrawBubble(SKCanvas canvas, SKPoint position, float radius, SKColor color)
     {
-        // Main bubble
-        using var paint = new SKPaint
-        {
-            Color = color,
-            IsAntialias = true,
-            Shader = SKShader.CreateRadialGradient(
-                new SKPoint(position.X - radius * 0.3f, position.Y - radius * 0.3f),
-                radius * 1.2f,
-                new[] { color.WithAlpha(255), color.WithAlpha(180) },
-                SKShaderTileMode.Clamp)
-        };
-        canvas.DrawCircle(position, radius, paint);
+        // Main bubble with gradient shader
+        using var shader = SKShader.CreateRadialGradient(
+            new SKPoint(position.X - radius * 0.3f, position.Y - radius * 0.3f),
+            radius * 1.2f,
+            new[] { color.WithAlpha(255), color.WithAlpha(180) },
+            SKShaderTileMode.Clamp);
+
+        _bubblePaint.Color = color;
+        _bubblePaint.Shader = shader;
+        canvas.DrawCircle(position, radius, _bubblePaint);
+        _bubblePaint.Shader = null; // Clear shader for next use
 
         // Highlight
-        using var highlightPaint = new SKPaint
-        {
-            Color = SKColors.White.WithAlpha(100),
-            IsAntialias = true
-        };
         canvas.DrawCircle(new SKPoint(position.X - radius * 0.3f, position.Y - radius * 0.3f),
-                         radius * 0.4f, highlightPaint);
+                         radius * 0.4f, _highlightPaint);
 
         // Border
-        using var borderPaint = new SKPaint
-        {
-            Color = color.WithAlpha(200),
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 2,
-            IsAntialias = true
-        };
-        canvas.DrawCircle(position, radius, borderPaint);
+        _borderPaint.Color = color.WithAlpha(200);
+        canvas.DrawCircle(position, radius, _borderPaint);
     }
 
     private void DrawCurrentBubble(SKCanvas canvas)
@@ -315,31 +300,16 @@ public class GameCanvasView : SKCanvasView
 
         var state = _gameEngine.GameState;
 
-        using var textPaint = new SKPaint
-        {
-            Color = SKColors.White,
-            TextSize = 24,
-            IsAntialias = true,
-            FakeBoldText = true
-        };
-
         // Score
-        canvas.DrawText($"Score: {state.Score}", 20, 40, textPaint);
+        canvas.DrawText($"Score: {state.Score}", 20, 40, _textPaint);
 
         // Level
-        canvas.DrawText($"Level: {state.CurrentLevel}", 20, 70, textPaint);
+        canvas.DrawText($"Level: {state.CurrentLevel}", 20, 70, _textPaint);
 
         // Combo
         if (state.Combo > 1)
         {
-            using var comboPaint = new SKPaint
-            {
-                Color = SKColors.Yellow,
-                TextSize = 28,
-                IsAntialias = true,
-                FakeBoldText = true
-            };
-            canvas.DrawText($"Combo x{state.Combo}!", info.Width / 2 - 60, 40, comboPaint);
+            canvas.DrawText($"Combo x{state.Combo}!", info.Width / 2 - 60, 40, _comboPaint);
         }
 
         // Game Over / Level Complete
@@ -414,6 +384,10 @@ public class GameCanvasView : SKCanvasView
 
     public void StartGameLoop()
     {
+        // Prevent multiple timers from being created
+        if (_isRunning)
+            return;
+
         _isRunning = true;
         _lastUpdate = DateTime.Now;
 

@@ -5,6 +5,7 @@ namespace BubbleShot.Views;
 public partial class GamePage : ContentPage
 {
     private readonly GameViewModel _viewModel;
+    private bool _isMonitoring;
 
     public GamePage(GameViewModel viewModel)
     {
@@ -22,16 +23,32 @@ public partial class GamePage : ContentPage
         GameCanvas.StartGameLoop();
 
         // Monitor game state - only stop timer on game over, not level complete
-        Dispatcher.StartTimer(TimeSpan.FromMilliseconds(100), () =>
+        // Prevent multiple timers from being created
+        if (!_isMonitoring)
         {
-            _viewModel.CheckGameState();
-            return !_viewModel.GameEngine.GameState.IsGameOver;
-        });
+            _isMonitoring = true;
+            Dispatcher.StartTimer(TimeSpan.FromMilliseconds(100), () =>
+            {
+                if (!_isMonitoring)
+                    return false;
+
+                _viewModel.CheckGameState();
+
+                if (_viewModel.GameEngine.GameState.IsGameOver)
+                {
+                    _isMonitoring = false;
+                    return false;
+                }
+
+                return true;
+            });
+        }
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
         GameCanvas.StopGameLoop();
+        _isMonitoring = false;
     }
 }
