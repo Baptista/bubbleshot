@@ -426,7 +426,12 @@ public class GameEngine
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
 
         int row = (int)Math.Round((position.Y - _gridRow0Y) / (bubbleDiameter * 0.866f));
-        row = Math.Max(0, Math.Min(row, _totalRows - 1));
+
+        // Calculate the minimum visible row (first row in visible area)
+        int minVisibleRow = (int)Math.Floor((_gridStartY - _gridRow0Y) / (bubbleDiameter * 0.866f));
+
+        // Clamp row to be within visible range and total rows
+        row = Math.Max(minVisibleRow, Math.Min(row, _totalRows - 1));
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
