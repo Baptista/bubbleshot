@@ -262,6 +262,15 @@ public class GameEngine
         if (_shootingBubblePosition.Y - _bubbleRadius <= 150)
         {
             AttachBubble(_shootingBubblePosition, _currentBubble.Color);
+            return;
+        }
+
+        // Safety check: if bubble somehow escaped bounds, attach it to nearest position
+        if (_shootingBubblePosition.Y < 0 || _shootingBubblePosition.Y > _canvasHeight ||
+            _shootingBubblePosition.X < 0 || _shootingBubblePosition.X > _canvasWidth)
+        {
+            AttachBubble(_shootingBubblePosition, _currentBubble.Color);
+            return;
         }
 
         _currentBubble.Position = _shootingBubblePosition;
