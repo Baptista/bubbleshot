@@ -324,35 +324,24 @@ public class GameEngine
             }
         }
 
-        // Check if reached top of visible grid
-        // Only attach at top if there are already bubbles in the visible area to attach to
-        if (_shootingBubblePosition.Y - _bubbleRadius <= _gridStartY)
+        // Find the topmost (lowest Y) visible bubble position
+        float topmostBubbleY = float.MaxValue;
+        for (int i = 0; i < _bubbles.Count; i++)
         {
-            // Find the lowest bubble Y position in visible grid
-            float lowestBubbleY = float.MaxValue;
-            bool hasBubblesInVisibleArea = false;
-
-            for (int i = 0; i < _bubbles.Count; i++)
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
             {
-                if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
+                if (_bubbles[i].Position.Y < topmostBubbleY)
                 {
-                    if (_bubbles[i].Position.Y < lowestBubbleY)
-                    {
-                        lowestBubbleY = _bubbles[i].Position.Y;
-                    }
-                    if (_bubbles[i].Position.Y >= _gridStartY)
-                    {
-                        hasBubblesInVisibleArea = true;
-                    }
+                    topmostBubbleY = _bubbles[i].Position.Y;
                 }
             }
+        }
 
-            // Only attach if we're near existing bubbles OR if bubbles exist in visible area
-            if (hasBubblesInVisibleArea || _shootingBubblePosition.Y >= lowestBubbleY - _bubbleRadius * 3)
-            {
-                AttachBubble(_shootingBubblePosition, _currentBubble.Color);
-                return;
-            }
+        // Only attach at top if bubble reached the topmost existing bubble
+        if (topmostBubbleY != float.MaxValue && _shootingBubblePosition.Y - _bubbleRadius <= topmostBubbleY)
+        {
+            AttachBubble(_shootingBubblePosition, _currentBubble.Color);
+            return;
         }
 
         // Safety check: if bubble somehow escaped bounds, attach it to nearest position
@@ -427,11 +416,8 @@ public class GameEngine
 
         int row = (int)Math.Round((position.Y - _gridRow0Y) / (bubbleDiameter * 0.866f));
 
-        // Calculate the minimum visible row (first row in visible area)
-        int minVisibleRow = (int)Math.Floor((_gridStartY - _gridRow0Y) / (bubbleDiameter * 0.866f));
-
-        // Clamp row to be within visible range and total rows
-        row = Math.Max(minVisibleRow, Math.Min(row, _totalRows - 1));
+        // Clamp row to valid range
+        row = Math.Max(0, Math.Min(row, _totalRows - 1));
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
