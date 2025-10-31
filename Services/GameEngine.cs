@@ -368,6 +368,22 @@ public class GameEngine
         float gridX = startX + col * bubbleDiameter + offsetX;
         float gridY = _gridRow0Y + row * bubbleDiameter * 0.866f;
 
+        // SAFETY: Ensure bubble is attached in visible area
+        // If calculated position is above visible area, clamp it to visible area
+        if (gridY < _gridStartY)
+        {
+            // Recalculate row to be at the visible boundary
+            row = (int)Math.Round((_gridStartY - _gridRow0Y) / (bubbleDiameter * 0.866f));
+            row = Math.Max(0, Math.Min(row, _totalRows - 1));
+
+            // Recalculate position with corrected row
+            offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
+            gridX = startX + col * bubbleDiameter + offsetX;
+            gridY = _gridRow0Y + row * bubbleDiameter * 0.866f;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"Attaching bubble at Row={row}, Y={gridY}, GridStartY={_gridStartY}, Visible={gridY >= _gridStartY}");
+
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
 
