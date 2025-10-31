@@ -194,10 +194,12 @@ public class GameEngine
 
     public void Update(float deltaTime)
     {
+        // Always update popping animation, even when game is over or level complete
+        UpdatePoppingAnimation(deltaTime);
+
+        // Stop game updates if paused, game over, or level complete
         if (GameState.IsPaused || GameState.IsGameOver || GameState.IsLevelComplete)
             return;
-
-        UpdatePoppingAnimation(deltaTime);
 
         if (IsShootingInProgress)
         {
@@ -300,22 +302,21 @@ public class GameEngine
             PopBubbles(matchingBubbles);
             RemoveOrphanedBubbles();
             GameState.AddScore(matchingBubbles.Count);
-
-            // Validate next bubble color after clearing bubbles
-            ValidateNextBubbleColor();
         }
         else
         {
             GameState.ResetCombo();
         }
 
-        // Check win/lose conditions
+        // Check win/lose conditions FIRST
         CheckGameConditions();
 
         // Prepare next bubble (only if game is still active)
         IsShootingInProgress = false;
         if (!GameState.IsLevelComplete && !GameState.IsGameOver)
         {
+            // Validate next bubble color after clearing bubbles (only if game continues)
+            ValidateNextBubbleColor();
             CreateNewBubble();
             CreateNextBubble();
         }
