@@ -210,6 +210,7 @@ public class GameEngine
     private void UpdatePoppingAnimation(float deltaTime)
     {
         // Avoid LINQ allocation - use for loop with manual removal
+        bool anyRemoved = false;
         for (int i = _bubbles.Count - 1; i >= 0; i--)
         {
             var bubble = _bubbles[i];
@@ -219,8 +220,15 @@ public class GameEngine
                 if (bubble.PopAnimationProgress >= 1)
                 {
                     _bubbles.RemoveAt(i);
+                    anyRemoved = true;
                 }
             }
+        }
+
+        // Re-check game conditions after removing bubbles to ensure level complete is detected
+        if (anyRemoved && !GameState.IsLevelComplete && !GameState.IsGameOver)
+        {
+            CheckGameConditions();
         }
     }
 
