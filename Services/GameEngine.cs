@@ -20,7 +20,8 @@ public class GameEngine
     private Random _random;
     private float _bubbleRadius;
     private float _gridOffsetY;  // Tracks how much the grid has scrolled down
-    private float _gridStartY;   // Initial Y position of the grid
+    private float _gridStartY;   // Top of visible area
+    private float _gridRow0Y;    // Current Y position where row 0 is located
 
     public GameState GameState { get; private set; }
     public List<Bubble> Bubbles => _bubbles;
@@ -81,7 +82,7 @@ public class GameEngine
 
         // Position grid so most rows are above screen (will scroll down as cleared)
         float totalGridHeight = totalRows * bubbleDiameter * 0.866f;
-        float gridTopY = _gridStartY - (totalGridHeight - visibleGridHeight);
+        _gridRow0Y = _gridStartY - (totalGridHeight - visibleGridHeight);  // Where row 0 starts
         _gridOffsetY = 0;  // No scroll offset initially
 
         for (int row = 0; row < totalRows; row++)
@@ -93,7 +94,7 @@ public class GameEngine
             for (int col = 0; col < colsInRow; col++)
             {
                 float x = startX + col * bubbleDiameter + offsetX;
-                float y = gridTopY + row * bubbleDiameter * 0.866f;
+                float y = _gridRow0Y + row * bubbleDiameter * 0.866f;
 
                 var color = GetRandomColor(numColors);
                 var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
@@ -283,6 +284,7 @@ public class GameEngine
             }
 
             _gridOffsetY += scrollAmount;
+            _gridRow0Y += scrollAmount;  // Update row 0 position after scroll
         }
     }
 
@@ -308,16 +310,11 @@ public class GameEngine
         }
 
         // Check collision with existing bubbles - optimize with early exit and no LINQ
-        // Only check bubbles that are in the visible play area
         int bubbleCount = _bubbles.Count;
         for (int i = 0; i < bubbleCount; i++)
         {
             var bubble = _bubbles[i];
-            if (bubble.IsPopping)
-                continue;
-
-            // Skip bubbles that are above the visible play area
-            if (bubble.Position.Y < _gridStartY - _bubbleRadius)
+            if (bubble.IsPopping || bubble.Row < 0)  // Skip popping bubbles and shooter bubbles
                 continue;
 
             if (bubble.CollidesWith(_shootingBubblePosition, _bubbleRadius))
@@ -356,7 +353,7 @@ public class GameEngine
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
-        float gridY = _gridStartY + row * bubbleDiameter * 0.866f;
+        float gridY = _gridRow0Y + row * bubbleDiameter * 0.866f;
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
@@ -404,7 +401,7 @@ public class GameEngine
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
 
-        int row = (int)Math.Round((position.Y - _gridStartY) / (bubbleDiameter * 0.866f));
+        int row = (int)Math.Round((position.Y - _gridRow0Y) / (bubbleDiameter * 0.866f));
         row = Math.Max(0, Math.Min(row, MaxRows - 1));
 
         bool isOddRow = row % 2 == 1;
@@ -436,7 +433,7 @@ public class GameEngine
                     // Calculate distance from original position
                     float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
                     float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
-                    float candidateY = _gridStartY + r * bubbleDiameter * 0.866f;
+                    float candidateY = _gridRow0Y + r * bubbleDiameter * 0.866f;
                     float dist = (position.X - candidateX) * (position.X - candidateX) +
                                  (position.Y - candidateY) * (position.Y - candidateY);
 

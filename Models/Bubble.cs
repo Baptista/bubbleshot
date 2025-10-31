@@ -26,8 +26,7 @@ public class Bubble
     public bool CollidesWith(SKPoint point, float otherRadius)
     {
         var distance = SKPoint.Distance(Position, point);
-        // Use slightly larger threshold to catch fast-moving bubbles
-        return distance < (Radius + otherRadius) * 1.1f;
+        return distance < (Radius + otherRadius);
     }
 
     public SKColor GetSKColor()
