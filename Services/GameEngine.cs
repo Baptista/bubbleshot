@@ -34,6 +34,13 @@ public class GameEngine
     private SKPoint _shootingBubblePosition;
     private SKPoint _shootingBubbleVelocity;
 
+    // Scrolling viewport system
+    private int _totalRowsForLevel;     // Total rows that need to be cleared for the level
+    private int _visibleRows;           // Number of rows visible on screen
+    private int _rowsGenerated;         // Number of rows generated so far
+    private int _totalBubblesForLevel;  // Total bubbles that need to be cleared
+    private int _bubblesCleared;        // Bubbles cleared so far
+
     public GameEngine()
     {
         _bubbles = new List<Bubble>();
@@ -64,16 +71,29 @@ public class GameEngine
 
     private void CreateBubbleGrid(int level)
     {
-        // Start with only 3 rows at level 1, add 1 row every 2 levels
-        int numRows = Math.Min(3 + (level - 1) / 2, 7);  // Max 7 rows for playability
+        // Calculate total rows for the level - progressive scaling
+        // Level 1: 5 rows, Level 10: ~8 rows, Level 50: ~20 rows, Level 100: ~35 rows
+        _totalRowsForLevel = Math.Min(5 + (level - 1) / 3, 50);
+
+        // Calculate visible rows (always show 7 rows on screen)
+        _visibleRows = 7;
+
+        // Start by generating only visible rows
+        int initialRows = Math.Min(_visibleRows, _totalRowsForLevel);
+        _rowsGenerated = initialRows;
+
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
+
+        // Calculate total bubbles for the level (approximate)
+        _totalBubblesForLevel = CalculateTotalBubblesForRows(_totalRowsForLevel);
+        _bubblesCleared = 0;
 
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;  // Start higher up for more play space
 
-        for (int row = 0; row < numRows; row++)
+        for (int row = 0; row < initialRows; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
             int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
@@ -91,6 +111,102 @@ public class GameEngine
         }
 
         GameState.BubblesRemaining = _bubbles.Count;
+    }
+
+    private int CalculateTotalBubblesForRows(int numRows)
+    {
+        int total = 0;
+        for (int row = 0; row < numRows; row++)
+        {
+            // Odd rows have one fewer column
+            int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
+            total += colsInRow;
+        }
+        return total;
+    }
+
+    private void AddNewRowsAtTop()
+    {
+        // Check if we still have rows to generate
+        if (_rowsGenerated >= _totalRowsForLevel)
+            return;
+
+        int highestRow = GetHighestOccupiedRow();
+
+        // If grid is full (rows reach the visible limit), don't add more yet
+        if (highestRow >= _visibleRows - 1)
+            return;
+
+        // Calculate how many rows to add
+        int rowsToAdd;
+        if (highestRow < 0)
+        {
+            // Grid is empty - add up to visible rows
+            rowsToAdd = Math.Min(_visibleRows, _totalRowsForLevel - _rowsGenerated);
+        }
+        else
+        {
+            // Grid has space at top - add rows to fill it
+            rowsToAdd = Math.Min(_visibleRows - 1 - highestRow, _totalRowsForLevel - _rowsGenerated);
+        }
+
+        if (rowsToAdd <= 0)
+            return;
+
+        float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
+        float gridWidth = MaxCols * bubbleDiameter;
+        float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
+        float startY = 150;
+        float rowHeight = bubbleDiameter * 0.866f;
+
+        // Shift all existing bubbles down by rowsToAdd rows
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            var bubble = _bubbles[i];
+            if (bubble.Row >= 0) // Only shift grid bubbles, not shooter bubbles
+            {
+                bubble.Row += rowsToAdd;
+                bubble.Position = new SKPoint(
+                    bubble.Position.X,
+                    bubble.Position.Y + rowsToAdd * rowHeight
+                );
+            }
+        }
+
+        int numColors = Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6);
+
+        // Generate new rows at the top (rows 0 to rowsToAdd-1)
+        for (int row = 0; row < rowsToAdd; row++)
+        {
+            int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
+            float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
+
+            for (int col = 0; col < colsInRow; col++)
+            {
+                float x = startX + col * bubbleDiameter + offsetX;
+                float y = startY + row * rowHeight;
+
+                var color = GetRandomColor(numColors);
+                var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
+                _bubbles.Add(bubble);
+            }
+        }
+
+        _rowsGenerated += rowsToAdd;
+        GameState.BubblesRemaining = _bubbles.Count;
+    }
+
+    private int GetHighestOccupiedRow()
+    {
+        int highestRow = -1;
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0 && _bubbles[i].Row > highestRow)
+            {
+                highestRow = _bubbles[i].Row;
+            }
+        }
+        return highestRow;
     }
 
     private BubbleColor GetRandomColor(int numColors)
@@ -211,6 +327,7 @@ public class GameEngine
     {
         // Avoid LINQ allocation - use for loop with manual removal
         bool anyRemoved = false;
+        int bubblesRemovedCount = 0;
         for (int i = _bubbles.Count - 1; i >= 0; i--)
         {
             var bubble = _bubbles[i];
@@ -221,13 +338,23 @@ public class GameEngine
                 {
                     _bubbles.RemoveAt(i);
                     anyRemoved = true;
+                    bubblesRemovedCount++;
                 }
             }
+        }
+
+        // Track cleared bubbles
+        if (bubblesRemovedCount > 0)
+        {
+            _bubblesCleared += bubblesRemovedCount;
         }
 
         // Re-check game conditions after removing bubbles to ensure level complete is detected
         if (anyRemoved && !GameState.IsLevelComplete && !GameState.IsGameOver)
         {
+            // Try to add new rows from the top if space allows
+            AddNewRowsAtTop();
+
             CheckGameConditions();
         }
     }
@@ -348,7 +475,8 @@ public class GameEngine
         float startY = 150;
 
         int row = (int)Math.Round((position.Y - startY) / (bubbleDiameter * 0.866f));
-        row = Math.Max(0, Math.Min(row, MaxRows - 1));
+        // With scrolling system, rows can extend beyond MaxRows, so use a higher limit
+        row = Math.Max(0, Math.Min(row, 100)); // Allow up to 100 rows for scrolling
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
@@ -363,7 +491,7 @@ public class GameEngine
             var candidates = new List<(int row, int col, float distance)>();
 
             // Check all nearby positions in a 3x3 grid
-            for (int r = Math.Max(0, row - 1); r <= Math.Min(MaxRows - 1, row + 1); r++)
+            for (int r = Math.Max(0, row - 1); r <= Math.Min(100, row + 1); r++) // Allow higher rows
             {
                 bool rIsOdd = r % 2 == 1;
                 int maxColForR = rIsOdd ? MaxCols - 2 : MaxCols - 1;
@@ -560,7 +688,8 @@ public class GameEngine
             }
         }
 
-        if (activeBubbleCount == 0)
+        // Win condition: All bubbles cleared AND all rows have been generated
+        if (activeBubbleCount == 0 && _rowsGenerated >= _totalRowsForLevel)
         {
             GameState.IsLevelComplete = true;
         }
