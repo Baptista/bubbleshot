@@ -78,7 +78,7 @@ public class GameEngine
         // Calculate visible rows (always show 5 rows on screen)
         _visibleRows = 5;
 
-        // Start by generating only visible rows
+        // Start by generating only visible rows (never exceed visible limit)
         int initialRows = Math.Min(_visibleRows, _totalRowsForLevel);
         _rowsGenerated = initialRows;
 
@@ -134,7 +134,9 @@ public class GameEngine
         int highestRow = GetHighestOccupiedRow();
 
         // If grid is full (rows reach the visible limit), don't add more yet
-        if (highestRow >= _visibleRows - 1)
+        // Count actual rows (highestRow is 0-indexed, so add 1 to get count)
+        int occupiedRowCount = (highestRow >= 0) ? highestRow + 1 : 0;
+        if (occupiedRowCount >= _visibleRows)
             return;
 
         // Calculate how many rows to add
@@ -146,8 +148,9 @@ public class GameEngine
         }
         else
         {
-            // Grid has space at top - add rows to fill it
-            rowsToAdd = Math.Min(_visibleRows - 1 - highestRow, _totalRowsForLevel - _rowsGenerated);
+            // Grid has space at top - add rows to fill it (but never exceed visible limit)
+            int spaceAvailable = _visibleRows - occupiedRowCount;
+            rowsToAdd = Math.Min(spaceAvailable, _totalRowsForLevel - _rowsGenerated);
         }
 
         if (rowsToAdd <= 0)
