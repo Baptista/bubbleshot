@@ -75,8 +75,8 @@ public class GameEngine
         // Level 1: 5 rows, Level 10: ~8 rows, Level 50: ~20 rows, Level 100: ~35 rows
         _totalRowsForLevel = Math.Min(5 + (level - 1) / 3, 50);
 
-        // Calculate visible rows (always show 7 rows on screen)
-        _visibleRows = 7;
+        // Calculate visible rows (always show 5 rows on screen)
+        _visibleRows = 5;
 
         // Start by generating only visible rows
         int initialRows = Math.Min(_visibleRows, _totalRowsForLevel);
