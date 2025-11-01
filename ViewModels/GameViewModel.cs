@@ -75,6 +75,7 @@ public class GameViewModel : BaseViewModel
         _gameEngine.InitializeGame(_gameEngine.CanvasWidth, _gameEngine.CanvasHeight, _currentLevel);
         IsLevelComplete = false;
         UpdateStatus();
+        ((Command)NextLevelCommand).ChangeCanExecute();
     }
 
     private void NextLevel()
