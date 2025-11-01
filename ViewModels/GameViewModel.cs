@@ -41,7 +41,7 @@ public class GameViewModel : BaseViewModel
         PauseCommand = new Command(Pause, () => !_gameEngine.GameState.IsPaused);
         ResumeCommand = new Command(Resume, () => _gameEngine.GameState.IsPaused);
         RestartCommand = new Command(Restart);
-        NextLevelCommand = new Command(NextLevel, () => _gameEngine.GameState.IsLevelComplete);
+        NextLevelCommand = new Command(NextLevel, () => IsLevelComplete);
         BackToMenuCommand = new Command(async () => await BackToMenu());
     }
 
