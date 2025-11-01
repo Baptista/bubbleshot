@@ -131,13 +131,25 @@ public class GameEngine
         if (_rowsGenerated >= _totalRowsForLevel)
             return;
 
-        // Check if top rows need to be filled - add rows when fewer than visible rows exist
         int highestRow = GetHighestOccupiedRow();
-        if (highestRow < 0 || highestRow >= _visibleRows - 1)
-            return; // Grid is full or empty, no need to add rows yet
 
-        // Add rows one at a time when there's space at top
-        int rowsToAdd = Math.Min(_visibleRows - 1 - highestRow, _totalRowsForLevel - _rowsGenerated);
+        // If grid is full (rows reach the visible limit), don't add more yet
+        if (highestRow >= _visibleRows - 1)
+            return;
+
+        // Calculate how many rows to add
+        int rowsToAdd;
+        if (highestRow < 0)
+        {
+            // Grid is empty - add up to visible rows
+            rowsToAdd = Math.Min(_visibleRows, _totalRowsForLevel - _rowsGenerated);
+        }
+        else
+        {
+            // Grid has space at top - add rows to fill it
+            rowsToAdd = Math.Min(_visibleRows - 1 - highestRow, _totalRowsForLevel - _rowsGenerated);
+        }
+
         if (rowsToAdd <= 0)
             return;
 
