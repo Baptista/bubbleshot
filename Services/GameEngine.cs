@@ -469,7 +469,7 @@ public class GameEngine
                 bool found = false;
                 for (int searchRadius = 2; searchRadius <= 5 && !found; searchRadius++)
                 {
-                    for (int r = Math.Max(0, row - searchRadius); r <= Math.Min(MaxRows - 1, row + searchRadius) && !found; r++)
+                    for (int r = Math.Max(0, row - searchRadius); r <= Math.Min(_totalRows - 1, row + searchRadius) && !found; r++)
                     {
                         bool rIsOdd = r % 2 == 1;
                         int maxColForR = rIsOdd ? MaxCols - 2 : MaxCols - 1;
@@ -481,7 +481,7 @@ public class GameEngine
                                 // Calculate actual distance to prioritize closest positions
                                 float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
                                 float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
-                                float candidateY = startY + r * bubbleDiameter * 0.866f;
+                                float candidateY = _gridRow0Y + r * bubbleDiameter * 0.866f;
                                 float dist = (position.X - candidateX) * (position.X - candidateX) +
                                              (position.Y - candidateY) * (position.Y - candidateY);
 
