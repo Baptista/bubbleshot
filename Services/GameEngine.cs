@@ -92,6 +92,8 @@ public class GameEngine
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;  // Start higher up for more play space
+        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
+        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
         for (int row = 0; row < initialRows; row++)
         {
@@ -102,7 +104,7 @@ public class GameEngine
             for (int col = 0; col < colsInRow; col++)
             {
                 float x = startX + col * bubbleDiameter + offsetX;
-                float y = startY + row * bubbleDiameter * 0.866f; // hexagonal spacing
+                float y = startY + row * rowHeight; // hexagonal spacing
 
                 var color = GetRandomColor(numColors);
                 var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
@@ -160,7 +162,8 @@ public class GameEngine
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;
-        float rowHeight = bubbleDiameter * 0.866f;
+        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
+        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
         // Shift all existing bubbles down by rowsToAdd rows
         for (int i = 0; i < _bubbles.Count; i++)
@@ -426,9 +429,11 @@ public class GameEngine
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
+        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
+        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
-        float gridY = startY + row * bubbleDiameter * 0.866f;
+        float gridY = startY + row * rowHeight;
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
@@ -476,8 +481,10 @@ public class GameEngine
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;
+        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
+        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
-        int row = (int)Math.Round((position.Y - startY) / (bubbleDiameter * 0.866f));
+        int row = (int)Math.Round((position.Y - startY) / rowHeight);
         // With scrolling system, rows can extend beyond MaxRows, so use a higher limit
         row = Math.Max(0, Math.Min(row, 100)); // Allow up to 100 rows for scrolling
 
@@ -510,7 +517,7 @@ public class GameEngine
                     // Calculate distance from original position
                     float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
                     float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
-                    float candidateY = startY + r * bubbleDiameter * 0.866f;
+                    float candidateY = startY + r * rowHeight;
                     float dist = (position.X - candidateX) * (position.X - candidateX) +
                                  (position.Y - candidateY) * (position.Y - candidateY);
 
