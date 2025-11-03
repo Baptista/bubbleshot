@@ -108,10 +108,9 @@ public class GameEngine
             }
         }
 
-        // Initialize scroll offset to show only the bottom 5 rows
-        // If we have more than 5 rows, scroll down to hide the top rows
-        int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
-        _scrollOffset = hiddenRows * _rowHeight;
+        // Initialize scroll offset to 0 - start showing from row 0
+        // UpdateScrollPosition will handle scrolling as bubbles are cleared
+        _scrollOffset = 0;
 
         GameState.BubblesRemaining = _bubbles.Count;
     }
@@ -261,41 +260,32 @@ public class GameEngine
 
     private void UpdateScrollPosition()
     {
-        // Find the lowest occupied row
-        int lowestRow = -1;
+        // Find the topmost row that still has bubbles
+        int topOccupiedRow = -1;
+
         for (int i = 0; i < _bubbles.Count; i++)
         {
             if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
             {
-                if (lowestRow == -1 || _bubbles[i].Row > lowestRow)
+                if (topOccupiedRow == -1 || _bubbles[i].Row < topOccupiedRow)
                 {
-                    lowestRow = _bubbles[i].Row;
+                    topOccupiedRow = _bubbles[i].Row;
                 }
             }
         }
 
         // If no bubbles remain, no need to scroll
-        if (lowestRow == -1)
+        if (topOccupiedRow == -1)
             return;
 
-        // Calculate how many rows are currently visible
-        // We want to scroll down so that the viewport shows rows optimally
-        // Target: Keep the bottom 5 rows visible, scroll down to reveal upper rows as lower ones clear
+        // Scroll to keep the topmost occupied row at the top of the viewport
+        // This means as rows get cleared from the top, we automatically scroll down to show more rows
+        _scrollOffset = topOccupiedRow * _rowHeight;
 
-        // Calculate the ideal scroll offset: we want the lowest row to be near the bottom of the viewport
-        // but still leave room for shooting
-        int targetBottomRow = lowestRow;
-        int targetTopRow = Math.Max(0, targetBottomRow - _visibleRows + 1);
-
-        // Calculate target scroll offset
-        float targetScrollOffset = targetTopRow * _rowHeight;
-
-        // Don't scroll more than needed (can't show rows that don't exist)
+        // Clamp to valid range
         float maxScrollOffset = Math.Max(0, (_totalRowsForLevel - _visibleRows) * _rowHeight);
-        targetScrollOffset = Math.Min(targetScrollOffset, maxScrollOffset);
-
-        // Smooth scrolling: gradually move toward target (or instant for now)
-        _scrollOffset = targetScrollOffset; // Instant scroll for now
+        _scrollOffset = Math.Min(_scrollOffset, maxScrollOffset);
+        _scrollOffset = Math.Max(0, _scrollOffset);
     }
 
     private void UpdateShootingBubble(float deltaTime)
