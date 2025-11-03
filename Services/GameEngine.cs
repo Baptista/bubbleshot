@@ -108,9 +108,10 @@ public class GameEngine
             }
         }
 
-        // Initialize scroll offset to 0 - start showing from row 0
-        // UpdateScrollPosition will handle scrolling as bubbles are cleared
-        _scrollOffset = 0;
+        // Initialize scroll offset to show the BOTTOM 5 rows
+        // For a 10-row level, we want to see rows 5-9, hiding rows 0-4 above
+        int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
+        _scrollOffset = hiddenRows * _rowHeight;
 
         GameState.BubblesRemaining = _bubbles.Count;
     }
@@ -260,27 +261,31 @@ public class GameEngine
 
     private void UpdateScrollPosition()
     {
-        // Find the topmost row that still has bubbles
-        int topOccupiedRow = -1;
+        // Find the bottommost row that still has bubbles (highest row number)
+        int lowestRow = -1;
 
         for (int i = 0; i < _bubbles.Count; i++)
         {
             if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
             {
-                if (topOccupiedRow == -1 || _bubbles[i].Row < topOccupiedRow)
+                if (lowestRow == -1 || _bubbles[i].Row > lowestRow)
                 {
-                    topOccupiedRow = _bubbles[i].Row;
+                    lowestRow = _bubbles[i].Row;
                 }
             }
         }
 
         // If no bubbles remain, no need to scroll
-        if (topOccupiedRow == -1)
+        if (lowestRow == -1)
             return;
 
-        // Scroll to keep the topmost occupied row at the top of the viewport
-        // This means as rows get cleared from the top, we automatically scroll down to show more rows
-        _scrollOffset = topOccupiedRow * _rowHeight;
+        // Keep the bottom _visibleRows rows in view
+        // As bottom rows are cleared, scroll UP to reveal top rows
+        // Example: lowestRow=8, visibleRows=5 -> show rows 4-8 -> scrollOffset = 4*rowHeight
+        int targetTopRow = lowestRow - _visibleRows + 1;
+        targetTopRow = Math.Max(0, targetTopRow); // Don't scroll above row 0
+
+        _scrollOffset = targetTopRow * _rowHeight;
 
         // Clamp to valid range
         float maxScrollOffset = Math.Max(0, (_totalRowsForLevel - _visibleRows) * _rowHeight);
