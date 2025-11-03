@@ -679,28 +679,38 @@ public class GameEngine
 
     private void CheckGameConditions()
     {
-        // Optimized - count active bubbles and check lowest row reached
+        // Count ALL bubbles including those currently popping
+        // Only check level complete when bubbles are fully removed, not while animating
         int activeBubbleCount = 0;
+        int poppingBubbleCount = 0;
         int lowestRowReached = -1; // Lowest row number with bubbles (towards bottom/shooter)
 
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
             // Only count grid bubbles (row >= 0), not shooter bubbles (row = -1)
-            if (!bubble.IsPopping && bubble.Row >= 0)
+            if (bubble.Row >= 0)
             {
-                activeBubbleCount++;
-
-                // Track lowest row number (remember: lower numbers = towards bottom/shooter)
-                if (lowestRowReached == -1 || bubble.Row < lowestRowReached)
+                if (bubble.IsPopping)
                 {
-                    lowestRowReached = bubble.Row;
+                    poppingBubbleCount++;
+                }
+                else
+                {
+                    activeBubbleCount++;
+
+                    // Track lowest row number (remember: lower numbers = towards bottom/shooter)
+                    if (lowestRowReached == -1 || bubble.Row < lowestRowReached)
+                    {
+                        lowestRowReached = bubble.Row;
+                    }
                 }
             }
         }
 
-        // Win condition: All bubbles cleared
-        if (activeBubbleCount == 0)
+        // Win condition: All bubbles cleared AND no bubbles currently popping
+        // This prevents premature level complete while bubbles are still animating
+        if (activeBubbleCount == 0 && poppingBubbleCount == 0)
         {
             GameState.IsLevelComplete = true;
         }
