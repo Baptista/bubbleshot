@@ -316,7 +316,11 @@ public class GameEngine
 
         // Check collision with existing bubbles - optimize with early exit and no LINQ
         // Account for scroll offset: bubble positions are in world space, shooting bubble is in screen space
+        // Only check bubbles that are visible on screen
         int bubbleCount = _bubbles.Count;
+        float viewportTop = 150; // Top of visible area
+        float viewportBottom = _canvasHeight - 150; // Bottom of visible area (where shooter is)
+
         for (int i = 0; i < bubbleCount; i++)
         {
             var bubble = _bubbles[i];
@@ -325,6 +329,10 @@ public class GameEngine
 
             // Convert bubble world position to screen position for collision check
             SKPoint bubbleScreenPos = new SKPoint(bubble.Position.X, bubble.Position.Y - _scrollOffset);
+
+            // Skip bubbles that are off-screen (outside visible viewport)
+            if (bubbleScreenPos.Y < viewportTop - _bubbleRadius || bubbleScreenPos.Y > viewportBottom + _bubbleRadius)
+                continue;
 
             float dx = _shootingBubblePosition.X - bubbleScreenPos.X;
             float dy = _shootingBubblePosition.Y - bubbleScreenPos.Y;
@@ -337,7 +345,7 @@ public class GameEngine
             }
         }
 
-        // Check if reached top
+        // Check if reached top of visible area
         if (_shootingBubblePosition.Y - _bubbleRadius <= 150)
         {
             AttachBubble(_shootingBubblePosition, _currentBubble.Color);
@@ -420,8 +428,13 @@ public class GameEngine
         float startY = 150;
 
         int row = (int)Math.Round((position.Y - startY) / _rowHeight);
-        // Clamp row to valid range
-        row = Math.Max(0, Math.Min(row, _totalRowsForLevel - 1));
+
+        // Clamp row to valid range - only allow attaching to visible rows
+        // Calculate which rows are currently visible based on scroll offset
+        int minVisibleRow = (int)Math.Floor(_scrollOffset / _rowHeight);
+        int maxVisibleRow = Math.Min(_totalRowsForLevel - 1, minVisibleRow + _visibleRows - 1);
+
+        row = Math.Max(minVisibleRow, Math.Min(row, maxVisibleRow));
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
