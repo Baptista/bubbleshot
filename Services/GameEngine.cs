@@ -627,7 +627,21 @@ public class GameEngine
         var toCheck = new Queue<Bubble>();
 
         // Start from top row (with reversed positioning, top row has HIGHEST row number)
-        int topRow = _totalRowsForLevel - 1;
+        // Find the actual highest row that has bubbles
+        int topRow = -1;
+        for (int i = 0; i < _bubbles.Count; i++)
+        {
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row > topRow)
+            {
+                topRow = _bubbles[i].Row;
+            }
+        }
+
+        // If no bubbles found, nothing to check
+        if (topRow == -1)
+            return;
+
+        // Add all bubbles from the top row as connected (they're attached to "ceiling")
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
