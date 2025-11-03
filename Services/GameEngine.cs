@@ -383,6 +383,20 @@ public class GameEngine
         // Find the closest grid position
         var (row, col) = FindClosestGridPosition(worldPosition);
 
+        // Safety check: if position is still occupied after FindClosestGridPosition,
+        // don't add the bubble (this shouldn't happen but prevents duplicates)
+        if (IsPositionOccupied(row, col))
+        {
+            // Position is occupied and no empty spot found - just end the shot
+            IsShootingInProgress = false;
+            if (!GameState.IsLevelComplete && !GameState.IsGameOver)
+            {
+                CreateNewBubble();
+                CreateNextBubble();
+            }
+            return;
+        }
+
         float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
@@ -395,6 +409,9 @@ public class GameEngine
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
+
+        // Update game state
+        GameState.BubblesRemaining = _bubbles.Count;
 
         // Check for matches
         var matchingBubbles = FindMatchingBubbles(newBubble);
@@ -494,14 +511,34 @@ public class GameEngine
             }
             else
             {
-                // Fallback: move up until we find empty spot (optimized)
-                while (IsPositionOccupied(row, col) && row > 0)
+                // Fallback: search in wider area for empty spot
+                // With reversed positioning: higher row numbers = towards top, lower = towards bottom
+                bool found = false;
+
+                // Try progressively wider search radius
+                for (int radius = 2; radius <= 5 && !found; radius++)
                 {
-                    row--;
-                    offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
-                    col = (int)Math.Round((position.X - startX - offsetX) / bubbleDiameter);
-                    col = Math.Max(0, Math.Min(col, MaxCols - 1));
+                    for (int r = Math.Max(0, row - radius); r <= Math.Min(_totalRowsForLevel - 1, row + radius); r++)
+                    {
+                        bool rIsOdd = r % 2 == 1;
+                        int maxColForR = rIsOdd ? MaxCols - 2 : MaxCols - 1;
+
+                        for (int c = 0; c <= maxColForR; c++)
+                        {
+                            if (!IsPositionOccupied(r, c))
+                            {
+                                row = r;
+                                col = c;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
                 }
+
+                // If still no empty spot found, the grid might be full
+                // Return the occupied position - caller will handle it
             }
         }
 
