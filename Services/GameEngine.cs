@@ -86,8 +86,6 @@ public class GameEngine
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;  // Start higher up for more play space
-        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
-        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
         // Calculate row height for hexagonal grid
         _rowHeight = bubbleDiameter * 0.866f;
@@ -102,7 +100,7 @@ public class GameEngine
             for (int col = 0; col < colsInRow; col++)
             {
                 float x = startX + col * bubbleDiameter + offsetX;
-                float y = startY + row * rowHeight; // hexagonal spacing
+                float y = startY + row * _rowHeight;
 
                 var color = GetRandomColor(numColors);
                 var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
@@ -110,74 +108,10 @@ public class GameEngine
             }
         }
 
-        GameState.BubblesRemaining = _bubbles.Count;
-    }
-
-    private int CalculateTotalBubblesForRows(int numRows)
-    {
-        int total = 0;
-        for (int row = 0; row < numRows; row++)
-        {
-            // Odd rows have one fewer column
-            int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
-            total += colsInRow;
-        }
-        return total;
-    }
-
-    private void AddNewRowsAtTop()
-    {
-        // Check if we still have rows to generate
-        if (_rowsGenerated >= _totalRowsForLevel)
-            return;
-
-        int highestRow = GetHighestOccupiedRow();
-
-        // If grid is full (rows reach the visible limit), don't add more yet
-        // Count actual rows (highestRow is 0-indexed, so add 1 to get count)
-        int occupiedRowCount = (highestRow >= 0) ? highestRow + 1 : 0;
-        if (occupiedRowCount >= _visibleRows)
-            return;
-
-        // Calculate how many rows to add
-        int rowsToAdd;
-        if (highestRow < 0)
-        {
-            // Grid is empty - add up to visible rows
-            rowsToAdd = Math.Min(_visibleRows, _totalRowsForLevel - _rowsGenerated);
-        }
-        else
-        {
-            // Grid has space at top - add rows to fill it (but never exceed visible limit)
-            int spaceAvailable = _visibleRows - occupiedRowCount;
-            rowsToAdd = Math.Min(spaceAvailable, _totalRowsForLevel - _rowsGenerated);
-        }
-
-        if (rowsToAdd <= 0)
-            return;
-
-        float bubbleDiameter = _bubbleRadius * 2 + BubbleSpacing;
-        float gridWidth = MaxCols * bubbleDiameter;
-        float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
-        float startY = 150;
-        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
-        float rowHeight = _bubbleRadius * 2 * 0.866f;
-
-        // Shift all existing bubbles down by rowsToAdd rows
-        for (int i = 0; i < _bubbles.Count; i++)
-        {
-            var bubble = _bubbles[i];
-            if (bubble.Row >= 0) // Only shift grid bubbles, not shooter bubbles
-            {
-                bubble.Row += rowsToAdd;
-                bubble.Position = new SKPoint(
-                    bubble.Position.X,
-                    bubble.Position.Y + rowsToAdd * rowHeight
-                );
-            }
-        }
-
-        int numColors = Math.Min(4 + (GameState.CurrentLevel - 1) / 2, 6);
+        // Initialize scroll offset to show only the bottom 5 rows
+        // If we have more than 5 rows, scroll down to hide the top rows
+        int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
+        _scrollOffset = hiddenRows * _rowHeight;
 
         GameState.BubblesRemaining = _bubbles.Count;
     }
@@ -439,11 +373,9 @@ public class GameEngine
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
-        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
-        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
-        float gridY = startY + row * rowHeight;
+        float gridY = startY + row * _rowHeight;
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
@@ -491,12 +423,10 @@ public class GameEngine
         float gridWidth = MaxCols * bubbleDiameter;
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;
-        // Use only bubble diameter (not including spacing) for vertical hexagonal spacing
-        float rowHeight = _bubbleRadius * 2 * 0.866f;
 
-        int row = (int)Math.Round((position.Y - startY) / rowHeight);
-        // With scrolling system, rows can extend beyond MaxRows, so use a higher limit
-        row = Math.Max(0, Math.Min(row, 100)); // Allow up to 100 rows for scrolling
+        int row = (int)Math.Round((position.Y - startY) / _rowHeight);
+        // Clamp row to valid range
+        row = Math.Max(0, Math.Min(row, _totalRowsForLevel - 1));
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
@@ -527,7 +457,7 @@ public class GameEngine
                     // Calculate distance from original position
                     float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
                     float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
-                    float candidateY = startY + r * rowHeight;
+                    float candidateY = startY + r * _rowHeight;
                     float dist = (position.X - candidateX) * (position.X - candidateX) +
                                  (position.Y - candidateY) * (position.Y - candidateY);
 
