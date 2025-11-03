@@ -97,8 +97,14 @@ public class GameCanvasView : SKCanvasView
         if (_gameEngine == null)
             return;
 
+        // Apply scroll offset to convert world coordinates to screen coordinates
+        float scrollOffset = _gameEngine.ScrollOffset;
+
         foreach (var bubble in _gameEngine.Bubbles)
         {
+            // Convert world position to screen position
+            SKPoint screenPos = new SKPoint(bubble.Position.X, bubble.Position.Y - scrollOffset);
+
             if (bubble.IsPopping)
             {
                 // Pop animation
@@ -106,15 +112,15 @@ public class GameCanvasView : SKCanvasView
                 float alpha = 1 - bubble.PopAnimationProgress;
 
                 _bubblePaint.Color = bubble.GetSKColor().WithAlpha((byte)(alpha * 255));
-                canvas.DrawCircle(bubble.Position, bubble.Radius * scale, _bubblePaint);
+                canvas.DrawCircle(screenPos, bubble.Radius * scale, _bubblePaint);
 
                 // Outer ring
                 _ringPaint.Color = SKColors.White.WithAlpha((byte)(alpha * 128));
-                canvas.DrawCircle(bubble.Position, bubble.Radius * scale * 1.2f, _ringPaint);
+                canvas.DrawCircle(screenPos, bubble.Radius * scale * 1.2f, _ringPaint);
             }
             else
             {
-                DrawBubble(canvas, bubble.Position, bubble.Radius, bubble.GetSKColor());
+                DrawBubble(canvas, screenPos, bubble.Radius, bubble.GetSKColor());
             }
         }
     }
