@@ -89,10 +89,13 @@ public class GameEngine
         // Calculate row height for hexagonal grid
         _rowHeight = bubbleDiameter * 0.866f;
 
-        // Generate ONLY the initial bubble rows at the BOTTOM
-        // With reversed positioning: Row 0 = bottom, higher numbers = top
-        // Fill only rows 0 to bubblesRows-1 (e.g., rows 0-4)
-        for (int row = 0; row < bubblesRows; row++)
+        // Generate bubbles at the TOP rows (5-9 for level 1)
+        // With reversed positioning: Row 9 = top of screen, Row 0 = bottom
+        // For 5 initial rows: Fill rows 5, 6, 7, 8, 9 (top of visible area)
+        int startRow = 5; // Start at row 5 (middle of visible area)
+        int endRow = startRow + bubblesRows - 1; // e.g., rows 5-9
+
+        for (int row = startRow; row <= endRow && row < _totalRowsForLevel; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
             int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
@@ -111,8 +114,8 @@ public class GameEngine
         }
 
         // Initialize scroll offset to show bottom 10 rows (0-9)
-        // Rows 0-4: filled with bubbles
-        // Rows 5-9: empty (for shooting)
+        // Rows 0-4: EMPTY (for bubbles to stack when shooting)
+        // Rows 5-9: FILLED with bubbles (targets at top)
         // Rows 10-19: off-screen above
         int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
         _scrollOffset = hiddenRows * _rowHeight;
@@ -676,9 +679,9 @@ public class GameEngine
 
     private void CheckGameConditions()
     {
-        // Optimized - count active bubbles and check highest row reached
+        // Optimized - count active bubbles and check lowest row reached
         int activeBubbleCount = 0;
-        int highestRowReached = -1; // Highest row number with bubbles
+        int lowestRowReached = -1; // Lowest row number with bubbles (towards bottom/shooter)
 
         for (int i = 0; i < _bubbles.Count; i++)
         {
@@ -688,10 +691,10 @@ public class GameEngine
             {
                 activeBubbleCount++;
 
-                // Track highest row number (remember: higher numbers = towards top)
-                if (highestRowReached == -1 || bubble.Row > highestRowReached)
+                // Track lowest row number (remember: lower numbers = towards bottom/shooter)
+                if (lowestRowReached == -1 || bubble.Row < lowestRowReached)
                 {
-                    highestRowReached = bubble.Row;
+                    lowestRowReached = bubble.Row;
                 }
             }
         }
@@ -702,11 +705,11 @@ public class GameEngine
             GameState.IsLevelComplete = true;
         }
 
-        // Lose condition: Bubbles stacked too high
-        // With 10 visible rows (0-9), lose if bubbles reach row 9 (top of visible area)
-        // This leaves rows 5-8 as safe play area
-        int dangerRow = 9; // Adjust this for difficulty
-        if (highestRowReached >= dangerRow)
+        // Lose condition: Bubbles stacked too close to shooter at bottom
+        // With bubbles starting at rows 5-9 (top), if they stack down to row 1 or below, game over
+        // This gives player rows 2-4 as safe stacking area
+        int dangerRow = 1; // Game over if bubbles reach row 1 or 0
+        if (lowestRowReached >= 0 && lowestRowReached <= dangerRow)
         {
             GameState.IsGameOver = true;
         }
