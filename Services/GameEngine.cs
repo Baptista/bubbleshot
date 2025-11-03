@@ -73,12 +73,11 @@ public class GameEngine
 
     private void CreateBubbleGrid(int level)
     {
-        // Calculate total rows for the level - progressive scaling
-        // Level 1: 5 rows, Level 10: ~8 rows, Level 50: ~20 rows, Level 100: ~35 rows
-        _totalRowsForLevel = Math.Min(5 + (level - 1) / 3, 50);
-
-        // Calculate visible rows (always show 5 rows on screen)
-        _visibleRows = 5;
+        // Calculate total rows for level progression
+        // But we always have extra rows for stacking bubbles
+        int bubblesRows = Math.Min(5 + (level - 1) / 3, 10); // Rows with initial bubbles
+        _visibleRows = 10; // Always show 10 rows on screen
+        _totalRowsForLevel = 20; // Total rows available (including off-screen)
 
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
 
@@ -90,11 +89,10 @@ public class GameEngine
         // Calculate row height for hexagonal grid
         _rowHeight = bubbleDiameter * 0.866f;
 
-        // Generate ALL rows for the level at once
-        // IMPORTANT: Row numbering is REVERSED - higher row numbers at TOP
-        // Row 9 -> Y = 150 (top)
-        // Row 0 -> Y = 150 + 9*rowHeight (bottom)
-        for (int row = 0; row < _totalRowsForLevel; row++)
+        // Generate ONLY the initial bubble rows at the BOTTOM
+        // With reversed positioning: Row 0 = bottom, higher numbers = top
+        // Fill only rows 0 to bubblesRows-1 (e.g., rows 0-4)
+        for (int row = 0; row < bubblesRows; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
             int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
@@ -112,8 +110,10 @@ public class GameEngine
             }
         }
 
-        // Initialize scroll offset to show the BOTTOM 5 rows (rows 0-4)
-        // With reversed positioning, rows 5-9 are above viewport, rows 0-4 are visible
+        // Initialize scroll offset to show bottom 10 rows (0-9)
+        // Rows 0-4: filled with bubbles
+        // Rows 5-9: empty (for shooting)
+        // Rows 10-19: off-screen above
         int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
         _scrollOffset = hiddenRows * _rowHeight;
 
@@ -676,10 +676,9 @@ public class GameEngine
 
     private void CheckGameConditions()
     {
-        // Optimized - count active bubbles and check bottom in one pass
+        // Optimized - count active bubbles and check highest row reached
         int activeBubbleCount = 0;
-        bool reachedBottom = false;
-        float bottomThreshold = _canvasHeight - 300;
+        int highestRowReached = -1; // Highest row number with bubbles
 
         for (int i = 0; i < _bubbles.Count; i++)
         {
@@ -689,11 +688,10 @@ public class GameEngine
             {
                 activeBubbleCount++;
 
-                // Check if bubble reached bottom (accounting for scroll offset)
-                float bubbleScreenY = bubble.Position.Y - _scrollOffset;
-                if (bubbleScreenY + _bubbleRadius > bottomThreshold)
+                // Track highest row number (remember: higher numbers = towards top)
+                if (highestRowReached == -1 || bubble.Row > highestRowReached)
                 {
-                    reachedBottom = true;
+                    highestRowReached = bubble.Row;
                 }
             }
         }
@@ -704,7 +702,11 @@ public class GameEngine
             GameState.IsLevelComplete = true;
         }
 
-        if (reachedBottom)
+        // Lose condition: Bubbles stacked too high
+        // With 10 visible rows (0-9), lose if bubbles reach row 9 (top of visible area)
+        // This leaves rows 5-8 as safe play area
+        int dangerRow = 9; // Adjust this for difficulty
+        if (highestRowReached >= dangerRow)
         {
             GameState.IsGameOver = true;
         }
