@@ -91,6 +91,9 @@ public class GameEngine
         _rowHeight = bubbleDiameter * 0.866f;
 
         // Generate ALL rows for the level at once
+        // IMPORTANT: Row numbering is REVERSED - higher row numbers at TOP
+        // Row 9 -> Y = 150 (top)
+        // Row 0 -> Y = 150 + 9*rowHeight (bottom)
         for (int row = 0; row < _totalRowsForLevel; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
@@ -100,7 +103,8 @@ public class GameEngine
             for (int col = 0; col < colsInRow; col++)
             {
                 float x = startX + col * bubbleDiameter + offsetX;
-                float y = startY + row * _rowHeight;
+                // REVERSE: Higher row numbers have LOWER Y values (towards top)
+                float y = startY + (_totalRowsForLevel - 1 - row) * _rowHeight;
 
                 var color = GetRandomColor(numColors);
                 var bubble = new Bubble(row, col, color, new SKPoint(x, y), _bubbleRadius);
@@ -108,8 +112,8 @@ public class GameEngine
             }
         }
 
-        // Initialize scroll offset to show the BOTTOM 5 rows
-        // For a 10-row level, we want to see rows 5-9, hiding rows 0-4 above
+        // Initialize scroll offset to show the BOTTOM 5 rows (rows 0-4)
+        // With reversed positioning, rows 5-9 are above viewport, rows 0-4 are visible
         int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
         _scrollOffset = hiddenRows * _rowHeight;
 
@@ -261,31 +265,39 @@ public class GameEngine
 
     private void UpdateScrollPosition()
     {
-        // Find the bottommost row that still has bubbles (highest row number)
-        int lowestRow = -1;
+        // Find the row with LOWEST row number (0, 1, 2...) that still has bubbles
+        // With reversed positioning, this is the bottommost visible row
+        int lowestRowNumber = -1;
 
         for (int i = 0; i < _bubbles.Count; i++)
         {
             if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
             {
-                if (lowestRow == -1 || _bubbles[i].Row > lowestRow)
+                if (lowestRowNumber == -1 || _bubbles[i].Row < lowestRowNumber)
                 {
-                    lowestRow = _bubbles[i].Row;
+                    lowestRowNumber = _bubbles[i].Row;
                 }
             }
         }
 
         // If no bubbles remain, no need to scroll
-        if (lowestRow == -1)
+        if (lowestRowNumber == -1)
             return;
 
-        // Keep the bottom _visibleRows rows in view
-        // As bottom rows are cleared, scroll UP to reveal top rows
-        // Example: lowestRow=8, visibleRows=5 -> show rows 4-8 -> scrollOffset = 4*rowHeight
-        int targetTopRow = lowestRow - _visibleRows + 1;
-        targetTopRow = Math.Max(0, targetTopRow); // Don't scroll above row 0
+        // Keep showing rows from lowestRowNumber up to lowestRowNumber + visibleRows - 1
+        // As row 0 clears, show rows 1-5; as rows 0,1 clear, show rows 2-6, etc.
+        int targetTopRow = Math.Max(0, lowestRowNumber + _visibleRows - 1);
+        targetTopRow = Math.Min(_totalRowsForLevel - 1, targetTopRow);
 
-        _scrollOffset = targetTopRow * _rowHeight;
+        int targetBottomRow = Math.Max(0, targetTopRow - _visibleRows + 1);
+
+        // Calculate scroll offset needed to show targetBottomRow at top of viewport
+        // Row worldY = 150 + (totalRows - 1 - row) * rowHeight
+        // We want: screenY = 150 (top of viewport)
+        // screenY = worldY - scrollOffset
+        // 150 = 150 + (totalRows - 1 - targetTopRow) * rowHeight - scrollOffset
+        // scrollOffset = (totalRows - 1 - targetTopRow) * rowHeight
+        _scrollOffset = (_totalRowsForLevel - 1 - targetTopRow) * _rowHeight;
 
         // Clamp to valid range
         float maxScrollOffset = Math.Max(0, (_totalRowsForLevel - _visibleRows) * _rowHeight);
@@ -378,7 +390,8 @@ public class GameEngine
         float offsetX = (row % 2 == 1) ? bubbleDiameter / 2 : 0;
 
         float gridX = startX + col * bubbleDiameter + offsetX;
-        float gridY = startY + row * _rowHeight;
+        // Use reversed positioning formula
+        float gridY = startY + (_totalRowsForLevel - 1 - row) * _rowHeight;
 
         var newBubble = new Bubble(row, col, color, new SKPoint(gridX, gridY), _bubbleRadius);
         _bubbles.Add(newBubble);
@@ -427,14 +440,12 @@ public class GameEngine
         float startX = (_canvasWidth - gridWidth) / 2 + _bubbleRadius;
         float startY = 150;
 
-        int row = (int)Math.Round((position.Y - startY) / _rowHeight);
+        // With reversed positioning: Row 9 at Y=150, Row 0 at Y=150+9*rowHeight
+        int rowIndex = (int)Math.Round((position.Y - startY) / _rowHeight);
+        int row = _totalRowsForLevel - 1 - rowIndex;
 
-        // Clamp row to valid range - only allow attaching to visible rows
-        // Calculate which rows are currently visible based on scroll offset
-        int minVisibleRow = (int)Math.Floor(_scrollOffset / _rowHeight);
-        int maxVisibleRow = Math.Min(_totalRowsForLevel - 1, minVisibleRow + _visibleRows - 1);
-
-        row = Math.Max(minVisibleRow, Math.Min(row, maxVisibleRow));
+        // Clamp row to valid range
+        row = Math.Max(0, Math.Min(row, _totalRowsForLevel - 1));
 
         bool isOddRow = row % 2 == 1;
         int maxColForRow = isOddRow ? MaxCols - 2 : MaxCols - 1;
@@ -465,7 +476,8 @@ public class GameEngine
                     // Calculate distance from original position
                     float candidateOffsetX = (r % 2 == 1) ? bubbleDiameter / 2 : 0;
                     float candidateX = startX + c * bubbleDiameter + candidateOffsetX;
-                    float candidateY = startY + r * _rowHeight;
+                    // Use reversed positioning formula
+                    float candidateY = startY + (_totalRowsForLevel - 1 - r) * _rowHeight;
                     float dist = (position.X - candidateX) * (position.X - candidateX) +
                                  (position.Y - candidateY) * (position.Y - candidateY);
 
@@ -574,11 +586,12 @@ public class GameEngine
         var connected = new HashSet<Bubble>();
         var toCheck = new Queue<Bubble>();
 
-        // Start from top row (optimized - no LINQ)
+        // Start from top row (with reversed positioning, top row has HIGHEST row number)
+        int topRow = _totalRowsForLevel - 1;
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
-            if (bubble.Row == 0 && !bubble.IsPopping)
+            if (bubble.Row == topRow && !bubble.IsPopping)
             {
                 toCheck.Enqueue(bubble);
                 connected.Add(bubble);
