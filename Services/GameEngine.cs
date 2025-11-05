@@ -73,11 +73,15 @@ public class GameEngine
 
     private void CreateBubbleGrid(int level)
     {
-        // Calculate total rows for level progression
-        // But we always have extra rows for stacking bubbles
-        int bubblesRows = Math.Min(5 + (level - 1) / 3, 10); // Rows with initial bubbles
+        // Calculate rows for this level
+        int bubblesRows = Math.Min(5 + (level - 1) / 3, 10); // Rows with initial bubbles (5-10)
+        int emptyBottomRows = 5; // Always have 5 empty rows at bottom for shooting/stacking
+
         _visibleRows = 10; // Always show 10 rows on screen
-        _totalRowsForLevel = 20; // Total rows available (including off-screen)
+        _totalRowsForLevel = emptyBottomRows + bubblesRows; // Only as many rows as needed
+
+        // For level 1: 5 empty + 5 bubbles = 10 total (all visible)
+        // For level 10+: 5 empty + 10 bubbles = 15 total (10 visible, 5 off-screen)
 
         int numColors = Math.Min(4 + (level - 1) / 2, 6);
 
@@ -89,13 +93,13 @@ public class GameEngine
         // Calculate row height for hexagonal grid
         _rowHeight = bubbleDiameter * 0.866f;
 
-        // Generate bubbles at the TOP rows (5-9 for level 1)
-        // With reversed positioning: Row 9 = top of screen, Row 0 = bottom
-        // For 5 initial rows: Fill rows 5, 6, 7, 8, 9 (top of visible area)
-        int startRow = 5; // Start at row 5 (middle of visible area)
-        int endRow = startRow + bubblesRows - 1; // e.g., rows 5-9
+        // Generate bubbles starting after the empty bottom rows
+        // For level 1: rows 5-9 have bubbles, rows 0-4 are empty
+        // With reversed positioning: higher row numbers appear at top of screen
+        int startRow = emptyBottomRows; // Start bubbles after empty rows
+        int endRow = startRow + bubblesRows - 1;
 
-        for (int row = startRow; row <= endRow && row < _totalRowsForLevel; row++)
+        for (int row = startRow; row <= endRow; row++)
         {
             // Odd rows have one fewer column to stay within bounds when offset
             int colsInRow = (row % 2 == 1) ? MaxCols - 1 : MaxCols;
@@ -113,10 +117,8 @@ public class GameEngine
             }
         }
 
-        // Initialize scroll offset to show bottom 10 rows (0-9)
-        // Rows 0-4: EMPTY (for bubbles to stack when shooting)
-        // Rows 5-9: FILLED with bubbles (targets at top)
-        // Rows 10-19: off-screen above
+        // Initialize scroll to show the bottom-most rows
+        // This ensures empty rows (0-4) are at bottom, bubble rows start from middle/top
         int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
         _scrollOffset = hiddenRows * _rowHeight;
 
