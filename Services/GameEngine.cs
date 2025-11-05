@@ -62,7 +62,15 @@ public class GameEngine
 
         _shooterPosition = new SKPoint(canvasWidth / 2, canvasHeight - 150);
 
-        GameState = new GameState { CurrentLevel = level };
+        // Reset GameState instead of creating new instance to preserve references
+        GameState.CurrentLevel = level;
+        GameState.Score = 0;
+        GameState.BubblesRemaining = 0;
+        GameState.IsGameOver = false;
+        GameState.IsLevelComplete = false;
+        GameState.IsPaused = false;
+        GameState.Combo = 0;
+
         _bubbles.Clear();
         IsShootingInProgress = false;
 
