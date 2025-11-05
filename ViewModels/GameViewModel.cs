@@ -32,6 +32,9 @@ public class GameViewModel : BaseViewModel
         set => SetProperty(ref _isLevelComplete, value);
     }
 
+    private bool _lastGameOverState = false;
+    private bool _lastLevelCompleteState = false;
+
     public GameViewModel(DatabaseService databaseService)
     {
         _databaseService = databaseService;
@@ -50,6 +53,8 @@ public class GameViewModel : BaseViewModel
         _currentLevel = level;
         _gameEngine.InitializeGame(width, height, level);
         IsLevelComplete = false;
+        _lastGameOverState = false;
+        _lastLevelCompleteState = false;
         UpdateStatus();
     }
 
@@ -74,6 +79,8 @@ public class GameViewModel : BaseViewModel
         // Use canvas dimensions from the engine (set during first init)
         _gameEngine.InitializeGame(_gameEngine.CanvasWidth, _gameEngine.CanvasHeight, _currentLevel);
         IsLevelComplete = false;
+        _lastGameOverState = false;
+        _lastLevelCompleteState = false;
         UpdateStatus();
         ((Command)NextLevelCommand).ChangeCanExecute();
     }
@@ -84,6 +91,8 @@ public class GameViewModel : BaseViewModel
         // Use canvas dimensions from the engine (set during first init)
         _gameEngine.InitializeGame(_gameEngine.CanvasWidth, _gameEngine.CanvasHeight, _currentLevel);
         IsLevelComplete = false;
+        _lastGameOverState = false;
+        _lastLevelCompleteState = false;
         UpdateStatus();
         ((Command)NextLevelCommand).ChangeCanExecute();
     }
@@ -117,13 +126,19 @@ public class GameViewModel : BaseViewModel
 
     public void CheckGameState()
     {
-        if (_gameEngine.GameState.IsGameOver)
+        bool currentGameOver = _gameEngine.GameState.IsGameOver;
+        bool currentLevelComplete = _gameEngine.GameState.IsLevelComplete;
+
+        // Only process state changes to avoid repeated actions
+        if (currentGameOver && !_lastGameOverState)
         {
+            _lastGameOverState = true;
             StatusMessage = "Game Over! Tap Back to return to menu.";
             _ = SaveHighScoreIfNeeded();
         }
-        else if (_gameEngine.GameState.IsLevelComplete)
+        else if (currentLevelComplete && !_lastLevelCompleteState)
         {
+            _lastLevelCompleteState = true;
             IsLevelComplete = true;
             StatusMessage = "Level Complete! Tap Next Level to continue.";
             ((Command)NextLevelCommand).ChangeCanExecute();

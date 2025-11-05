@@ -22,7 +22,7 @@ public partial class GamePage : ContentPage
         GameCanvas.GameEngine = _viewModel.GameEngine;
         GameCanvas.StartGameLoop();
 
-        // Monitor game state - only stop timer on game over, not level complete
+        // Monitor game state continuously
         // Prevent multiple timers from being created
         if (!_isMonitoring)
         {
@@ -34,12 +34,8 @@ public partial class GamePage : ContentPage
 
                 _viewModel.CheckGameState();
 
-                if (_viewModel.GameEngine.GameState.IsGameOver)
-                {
-                    _isMonitoring = false;
-                    return false;
-                }
-
+                // Keep timer running even after game over/level complete
+                // so that restart/next level detection works correctly
                 return true;
             });
         }
