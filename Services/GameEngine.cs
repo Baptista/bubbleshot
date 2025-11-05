@@ -117,10 +117,13 @@ public class GameEngine
             }
         }
 
-        // Initialize scroll to show the bottom-most rows
-        // This ensures empty rows (0-4) are at bottom, bubble rows start from middle/top
-        int hiddenRows = Math.Max(0, _totalRowsForLevel - _visibleRows);
-        _scrollOffset = hiddenRows * _rowHeight;
+        // Initialize scroll to show maximum 5 bubble rows initially
+        // Always show: 5 empty rows at bottom + max 5 bubble rows = 10 rows visible
+        // Hide extra bubble rows above, which are revealed as player clears rows
+        int maxVisibleBubbleRows = 5;
+        int visibleBubbleRows = Math.Min(bubblesRows, maxVisibleBubbleRows);
+        int hiddenBubbleRows = bubblesRows - visibleBubbleRows;
+        _scrollOffset = hiddenBubbleRows * _rowHeight;
 
         GameState.BubblesRemaining = _bubbles.Count;
     }
