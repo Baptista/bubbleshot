@@ -644,7 +644,7 @@ public class GameEngine
         int topRow = -1;
         for (int i = 0; i < _bubbles.Count; i++)
         {
-            if (!_bubbles[i].IsPopping && _bubbles[i].Row > topRow)
+            if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0 && _bubbles[i].Row > topRow)
             {
                 topRow = _bubbles[i].Row;
             }
@@ -686,11 +686,12 @@ public class GameEngine
         }
 
         // Pop orphaned bubbles (optimized - no LINQ allocation)
+        // Only check grid bubbles (Row >= 0), not shooter bubbles (Row = -1)
         int orphanedCount = 0;
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
-            if (!connected.Contains(bubble) && !bubble.IsPopping)
+            if (bubble.Row >= 0 && !connected.Contains(bubble) && !bubble.IsPopping)
             {
                 bubble.IsPopping = true;
                 bubble.PopAnimationProgress = 0;
