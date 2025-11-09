@@ -281,38 +281,38 @@ public class GameEngine
 
     private void UpdateScrollPosition()
     {
-        // Find the row with LOWEST row number (0, 1, 2...) that still has bubbles
-        // With reversed positioning, this is the bottommost visible row
+        // Find the highest and lowest row numbers with bubbles
         int lowestRowNumber = -1;
+        int highestRowNumber = -1;
 
         for (int i = 0; i < _bubbles.Count; i++)
         {
             if (!_bubbles[i].IsPopping && _bubbles[i].Row >= 0)
             {
-                if (lowestRowNumber == -1 || _bubbles[i].Row < lowestRowNumber)
-                {
-                    lowestRowNumber = _bubbles[i].Row;
-                }
+                int row = _bubbles[i].Row;
+                if (lowestRowNumber == -1 || row < lowestRowNumber)
+                    lowestRowNumber = row;
+                if (highestRowNumber == -1 || row > highestRowNumber)
+                    highestRowNumber = row;
             }
         }
 
         // If no bubbles remain, no need to scroll
-        if (lowestRowNumber == -1)
+        if (lowestRowNumber == -1 || highestRowNumber == -1)
             return;
 
-        // Keep showing rows from lowestRowNumber up to lowestRowNumber + visibleRows - 1
-        // As row 0 clears, show rows 1-5; as rows 0,1 clear, show rows 2-6, etc.
-        int targetTopRow = Math.Max(0, lowestRowNumber + _visibleRows - 1);
-        targetTopRow = Math.Min(_totalRowsForLevel - 1, targetTopRow);
+        // Calculate how many bubble rows we want to show (max 5)
+        const int maxVisibleBubbleRows = 5;
+        int bubbleRowSpan = highestRowNumber - lowestRowNumber + 1;
+        int visibleBubbleRowSpan = Math.Min(bubbleRowSpan, maxVisibleBubbleRows);
 
-        int targetBottomRow = Math.Max(0, targetTopRow - _visibleRows + 1);
+        // Target top row to show: bottom-most bubbles + max 5 visible
+        // This ensures we always show max 5 bubble rows, hiding extras at the top
+        int targetTopRow = lowestRowNumber + visibleBubbleRowSpan - 1;
+        targetTopRow = Math.Min(targetTopRow, highestRowNumber);
+        targetTopRow = Math.Min(targetTopRow, _totalRowsForLevel - 1);
 
-        // Calculate scroll offset needed to show targetBottomRow at top of viewport
-        // Row worldY = 150 + (totalRows - 1 - row) * rowHeight
-        // We want: screenY = 150 (top of viewport)
-        // screenY = worldY - scrollOffset
-        // 150 = 150 + (totalRows - 1 - targetTopRow) * rowHeight - scrollOffset
-        // scrollOffset = (totalRows - 1 - targetTopRow) * rowHeight
+        // Calculate scroll offset to show this target top row
         _scrollOffset = (_totalRowsForLevel - 1 - targetTopRow) * _rowHeight;
 
         // Clamp to valid range
