@@ -639,8 +639,7 @@ public class GameEngine
         var connected = new HashSet<Bubble>();
         var toCheck = new Queue<Bubble>();
 
-        // Start from top row (with reversed positioning, top row has HIGHEST row number)
-        // Find the actual highest row that has bubbles
+        // Find the actual highest row that has bubbles (this is the "ceiling" row)
         int topRow = -1;
         for (int i = 0; i < _bubbles.Count; i++)
         {
@@ -654,21 +653,38 @@ public class GameEngine
         if (topRow == -1)
             return;
 
-        // Add all bubbles from the top row as connected (they're attached to "ceiling")
+        // Find a ceiling anchor bubble: use the bubble in the top row closest to center column
+        // This ensures only bubbles connected to this anchor point are considered attached
+        Bubble? ceilingAnchor = null;
+        int centerCol = MaxCols / 2; // Center column (around column 3 for MaxCols=7)
+        int minDistanceToCenter = int.MaxValue;
+
         for (int i = 0; i < _bubbles.Count; i++)
         {
             var bubble = _bubbles[i];
             if (bubble.Row == topRow && !bubble.IsPopping)
             {
-                toCheck.Enqueue(bubble);
-                connected.Add(bubble);
+                int distanceToCenter = Math.Abs(bubble.Col - centerCol);
+                if (distanceToCenter < minDistanceToCenter)
+                {
+                    minDistanceToCenter = distanceToCenter;
+                    ceilingAnchor = bubble;
+                }
             }
         }
+
+        // If no ceiling anchor found, nothing is attached
+        if (ceilingAnchor == null)
+            return;
+
+        // Start flood-fill from the ceiling anchor bubble
+        toCheck.Enqueue(ceilingAnchor);
+        connected.Add(ceilingAnchor);
 
         int safetyCounter = 0;
         int maxIterations = 1000; // Safety limit to prevent infinite loops
 
-        // Find all connected bubbles
+        // Find all connected bubbles via flood-fill
         while (toCheck.Count > 0 && safetyCounter < maxIterations)
         {
             safetyCounter++;
